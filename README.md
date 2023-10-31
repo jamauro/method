@@ -89,7 +89,7 @@ import { create } from '/imports/api/todos/methods';
 
 async function submit() {
   try {
-    await create({text: 'Book flight to Hawaii'})
+    await create({text: 'book flight to Hawaii'})
   } catch(error) {
     alert(error)
   }
@@ -118,7 +118,7 @@ import { Todos } from '/imports/api/todos/collection';
 
 async function submit() {
   try {
-    await Todos.create({text: 'Book flight to Hawaii'})
+    await Todos.create({text: 'book flight to Hawaii'})
   } catch(error) {
     alert(error)
   }
