@@ -168,13 +168,15 @@ Methods.configure({
 Instead of using `run`, you can compose functions using `.pipe`. Each function's output will be available as an input for the next function.
 
 ```js
+// you'd define the functions in the pipe and then place them in the order you'd like them to execute within .pipe
+
 export const create = createMethod({
   name: 'todos.create',
   schema: Todos.schema
 }).pipe(
-  checkAdmin,
+  checkOwnership,
   createTodo,
-  server(sendEmail) // see server utility function below for more info. it's not included as part of this package.
+  sendNotification
 )
 ```
 
