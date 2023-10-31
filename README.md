@@ -1,13 +1,13 @@
 # Method
 
-Method is an easy way to add isomorphic methods with Optimistic UI for Meteor apps. It's built with Meteor 3.0 in mind. It should be a drop in replacement for Meteor's [Validated Method](https://github.com/meteor/validated-method) and comes with additional features:
+Method is an easy way to create `methods` with Optimistic UI for Meteor apps. It's built with Meteor 3.0 in mind. It's meant to be a drop in replacement for Meteor's [Validated Method](https://github.com/meteor/validated-method) and comes with additional features:
 
 * Global before and after hooks for methods
 * Pipe a series of functions
 * Authed by default (can be overriden)
 * Easily configure a rate limit
 * Attach the methods to Collections (optional)
-* Validate with a `jam:easy-schema` schema or a custom validation function
+* Validate with a [jam:easy-schema](https://github.com/jamauro/easy-schema) schema or a custom validation function
 * No need to use `.call` to invoke the method as with Validated Methods
 
 ## Usage
@@ -34,7 +34,7 @@ export const create = createMethod({
 });
 ```
 
-You can use a custom validation function instead of a `jam:easy-schema` schema if you'd like:
+You can use a custom validation function instead of a [jam:easy-schema](https://github.com/jamauro/easy-schema) schema if you'd like:
 ```js
 // import your schema from somewhere
 // import your validator function from somewhere
@@ -88,7 +88,7 @@ async function submit() {
 ```
 
 ### Attach methods to its Collection (optional)
-Instead of importing each method, you can attach them to the Collection. If you're using `jam:easy-schema` be sure to attach the schema before attaching the methods.
+Instead of importing each method, you can attach them to the Collection. If you're using [jam:easy-schema](https://github.com/jamauro/easy-schema) be sure to attach the schema before attaching the methods.
 
 ```js
 // /imports/api/todos/collection
@@ -122,7 +122,8 @@ You can also dynamically import your attached methods to reduce the initial bund
 You'll need to add a file to your project, e.g. `/imports/register-dynamic-imports.js` and import this file on both the client and the server near the top of its `mainModule`, e.g. `/client/main.js` and `/server/main.js`. Here's an example of the file:
 
 ```js
-// In order for the dynamic import to work properly, Meteor needs to know these paths exist. We do that by declaring them statically inside a if (false) block
+// In order for the dynamic import to work properly, Meteor needs to know these paths exist.
+// We do that by declaring them statically inside a if (false) block
 Meteor.startup(async () => {
   if (false) {
     await import('/imports/api/todos/schema'); // if using jam:easy-schema and want to dyanmically import it
@@ -168,7 +169,7 @@ export const create = createMethod({
 ```
 
 ### Changing authentication rules
-By default, all methods will be protected by authentication, meaning they will throw an error if there is *not* a logged-in user. You can change this for an individual method by setting `isPublic: true`. See Configuring below to change it for all methods.
+By default, all methods will be protected by authentication, meaning they will throw an error if there is *not* a logged-in user. You can change this for an individual method by setting `isPublic: true`. See [Configuring](#configuring) below to change it for all methods.
 
 ```js
 export const create = createMethod({
@@ -182,7 +183,7 @@ export const create = createMethod({
 ```
 
 ### Rate limiting
-Easily rate limit a method by setting its the max number of requests – the `limit` – within a given time period – the `interval`.
+Easily rate limit a method by setting its max number of requests – the `limit` – within a given time period – the `interval`.
 
 ```js
 export const create = createMethod({
@@ -214,6 +215,15 @@ const config = {
   basePath: `/imports/api`, // used when dynamically importing methods
 };
 ````
+
+To overrid the defaults, use
+```js
+import { Methods } from 'meteor/jam:method';
+
+Methods.configure({
+  // ... //
+})
+```
 
 ### Global before and after hooks
 You can create before and/or after functions to run before / after all methods. Both `before` and `after` accept a single function or an array of functions.
