@@ -183,13 +183,13 @@ export const create = createMethod({
 ```
 
 ### Rate limiting
-Easily rate limit a method by setting its max number of requests – the `limit` – within a given time period – the `interval`.
+Easily rate limit a method by setting its max number of requests – the `limit` – within a given time period (milliseconds) – the `interval`.
 
 ```js
 export const create = createMethod({
   name: 'todos.create',
   schema: Todos.schema,
-  rateLimit: {
+  rateLimit: { // rate limit to a max of 5 requests every second
     limit: 5,
     interval: 1000
   },
