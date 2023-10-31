@@ -31,8 +31,9 @@ export const create = createMethod({
   run({ text }) {
     const todo = {
       text,
-      checked: false,
-      authorId: Meteor.userId() // can also use this.userId instead of Meteor.userId()
+      done: false,
+      createdAt: new Date(),
+      authorId: Meteor.userId(), // can also use this.userId instead of Meteor.userId()
     }
     const todoId = Todos.insert(todo);
     return todoId;
@@ -53,7 +54,8 @@ export const create = createMethod({
   run({ text }) {
     const todo = {
       text,
-      checked: false,
+      done: false,
+      createdAt: new Date(),
       authorId: Meteor.userId() // can also use this.userId instead of Meteor.userId()
     }
     const todoId = Todos.insert(todo);
@@ -71,7 +73,8 @@ export const create = createMethod({
   async run({ text }) {
     const todo = {
       text,
-      checked: false,
+      done: false,
+      createdAt: new Date(),
       authorId: Meteor.userId() // can also use this.userId instead of Meteor.userId()
     }
     const todoId = await Todos.insertAsync(todo);
