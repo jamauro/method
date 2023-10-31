@@ -17,7 +17,9 @@ Method is an easy way to create Meteor `methods` with Optimistic UI. It's built 
 
 ### Create a method
 `name` is required and will be how Meteor's internals identifies it.
+
 `schema` will automatically validate a [jam:easy-schema](https://github.com/jamauro/easy-schema) schema.
+
 `run` will be executed when the method is called.
 
 ```js
