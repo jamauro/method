@@ -1,6 +1,6 @@
 # Method
 
-Method is an easy way to create `methods` with Optimistic UI for Meteor apps. It's built with Meteor 3.0 in mind. It's meant to be a drop in replacement for Meteor's [Validated Method](https://github.com/meteor/validated-method) and comes with additional features:
+Method is an easy way to create Meteor `methods` with Optimistic UI. It's built with Meteor 3.0 in mind. It's meant to be a drop in replacement for [Validated Method](https://github.com/meteor/validated-method) and comes with additional features:
 
 * Global before and after hooks for methods
 * Pipe a series of functions
@@ -8,7 +8,7 @@ Method is an easy way to create `methods` with Optimistic UI for Meteor apps. It
 * Easily configure a rate limit
 * Attach the methods to Collections (optional)
 * Validate with a [jam:easy-schema](https://github.com/jamauro/easy-schema) schema or a custom validation function
-* No need to use `.call` to invoke the method as with Validated Methods
+* No need to use `.call` to invoke the method as with `Validated Methods`
 
 ## Usage
 
@@ -218,6 +218,8 @@ const config = {
 
 To change the defaults, use:
 ```js
+// can be configured on client-side and server-side (in a file imported on both client and server)
+// or just server-side depending on your use case
 import { Methods } from 'meteor/jam:method';
 
 Methods.configure({
@@ -263,7 +265,7 @@ function log(input, pipeline) {
 *Server-only function*
 ```js
 // this will ensure that the function passed in will only run on the server
-// could come in handy if have you have a .pipe and some of the functions you want to ensure only run on the server
+// could come in handy if have you're using .pipe and some of the functions you want to ensure only run on the server
 function server(fn) {
   return function(...args) {
     if (Meteor.isServer) {
