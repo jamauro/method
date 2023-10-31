@@ -65,6 +65,10 @@ Mongo.Collection.prototype.attachMethods = async function (methods = undefined) 
 const check = Package['jam:easy-schema'] ? require('meteor/jam:easy-schema').check : undefined;
 
 export const createMethod = ({ name, schema = undefined, validate = undefined, run = undefined, rateLimit = undefined, isPublic = false, options = {} }) => {
+  if (!name) {
+    throw new Error('You must pass in a name when creating a method')
+  }
+
   let pipeline = [];
 
   if (typeof run === 'function') {
