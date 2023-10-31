@@ -16,6 +16,10 @@ Method is an easy way to create Meteor `methods` with Optimistic UI. It's built 
 `meteor add jam:method`
 
 ### Create a method
+`name` is required and will be how Meteor's internals identifies it.
+`schema` will automatically validate a [jam:easy-schema](https://github.com/jamauro/easy-schema) schema.
+`run` will be executed when the method is called.
+
 ```js
 import { createMethod } from 'meteor/jam:method'; // can import { Methods } from 'meteor/jam:method' instead and use Methods.create if you prefer
 
@@ -34,7 +38,7 @@ export const create = createMethod({
 });
 ```
 
-You can use a custom validation function instead of a [jam:easy-schema](https://github.com/jamauro/easy-schema) schema if you'd like:
+You can use a custom validation function instead if you'd like:
 ```js
 // import your schema from somewhere
 // import your validator function from somewhere
@@ -156,7 +160,8 @@ Methods.configure({
 ```
 
 ### Pipe a series of functions
-You can compose functions using `.pipe`. Each function's output will be available as an input for the next function.
+Instead of using `run`, you can compose functions using `.pipe`. Each function's output will be available as an input for the next function.
+
 ```js
 export const create = createMethod({
   name: 'todos.create',
