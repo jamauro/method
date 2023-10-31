@@ -169,7 +169,7 @@ export const create = createMethod({
 ```
 
 ### Changing authentication rules
-By default, all methods will be protected by authentication, meaning they will throw an error if there is *not* a logged-in user. You can change this for an individual method by setting `isPublic: true`. See [Configuring](#configuring) below to change it for all methods.
+By default, all methods will be protected by authentication, meaning they will throw an error if there is *not* a logged-in user. You can change this for an individual method by setting `isPublic: true`. See [Configuring](#configuring-optional) below to change it for all methods.
 
 ```js
 export const create = createMethod({
