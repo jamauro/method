@@ -192,7 +192,7 @@ export const create = createMethod({
   rateLimit: {
     limit: 5,
     interval: 1000
-  }
+  },
   async run({ text }) {
     // ... //
   }
@@ -216,13 +216,13 @@ const config = {
 };
 ````
 
-To overrid the defaults, use
+To change the defaults, use:
 ```js
 import { Methods } from 'meteor/jam:method';
 
 Methods.configure({
-  // ... //
-})
+  // ... change the defaults here ... //
+});
 ```
 
 ### Global before and after hooks
