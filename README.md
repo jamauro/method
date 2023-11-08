@@ -251,7 +251,7 @@ export const create = createMethod({
 #### Security note
 **`Important`**: Since Meteor does not currently support tree shaking, the code inside `run` function or `.pipe` would still be shipped to the client. If you want to prevent this, you have a couple of options:
 
-1. Import function(s) from a file within a `/server` folder. Any code imported from a `/server` folder will not be shipped to the client. The `/server` folder can be located anywhere within your project's file structure and you can have multiple `/server` folders. For example, you can co-locate with your collection folder, e.g. /imports/api/todos/server/, or it can be at the root of your project. See [secret code](https://guide.meteor.com/security.html#secret-code) for more info.
+1. Import function(s) from a file within a `/server` folder. Any code imported from a `/server` folder will not be shipped to the client. The `/server` folder can be located anywhere within your project's file structure and you can have multiple `/server` folders. For example, you can co-locate with your collection folder, e.g. `/imports/api/todos/server/`, or it can be at the root of your project. See [Secret server code](https://guide.meteor.com/security.html#secret-code) for more info.
 
 ```js
 export const create = createMethod({
