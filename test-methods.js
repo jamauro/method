@@ -132,6 +132,81 @@ export const fastMethod = createMethod({
   }
 });
 
+const beforeFunc = (args) => {
+  assert(!!args.num, true)
+  assert(typeof args.num, 'number')
+
+  return true;
+}
+
+const anotherBeforeFunc = (args) => {
+  assert(!!args.num, true)
+  assert(typeof args.num, 'number')
+
+  return 'whatever';
+}
+
+export const beforeMethod = createMethod({
+  name: 'beforeMethod',
+  schema: Any,
+  isPublic: true,
+  before: beforeFunc,
+  async run({ num }) {
+    return num * 2;
+  }
+});
+
+export const beforeArrayMethod = createMethod({
+  name: 'beforeArrayMethod',
+  schema: Any,
+  isPublic: true,
+  before: [beforeFunc, anotherBeforeFunc],
+  async run({ num }) {
+    return num * 2;
+  }
+});
+
+const afterFunc = (result, context) => {
+  assert.equal(result, context.originalInput.num * 3);
+  return true;
+}
+
+const anotherAfterFunc = (result, context) => {
+  assert.equal(result, context.originalInput.num * 3);
+  return true;
+}
+
+export const afterMethod = createMethod({
+  name: 'afterMethod',
+  schema: Any,
+  isPublic: true,
+  async run({ num }) {
+    return await num * 3;
+  },
+  after: afterFunc
+});
+
+export const afterArrayMethod = createMethod({
+  name: 'afterArrayMethod',
+  schema: Any,
+  isPublic: true,
+  async run({ num }) {
+    return await num * 3;
+  },
+  after: [afterFunc, anotherAfterFunc]
+});
+
+export const serverOnly = createMethod({
+  name: 'serverOnly',
+  schema: Any,
+  isPublic: true,
+  serverOnly: true,
+  async run({ num }) {
+    return await num * 3;
+  }
+});
+
+
 export const simplePipeline = createMethod({
   name: 'simplePipeline',
   schema: Number,
@@ -151,21 +226,6 @@ export const asyncPipeline = createMethod({
   (n) => Promise.resolve(n - 1),
   async (n) => n + 0.5
 );
-
-/* const partial = partialPipeline(
-  (i) => i + 10,
-  (i) => i / 2
-);
-
-const partial2 = partialPipeline(partial);
-
-export const partialMethod = createMethod({
-  name: 'partial',
-  schema: z.number()
-}).pipeline(
-  partial2,
-  (i) => i.toFixed(1)
-); */
 
 export const contextMethod = createMethod({
   name: 'context',
@@ -251,7 +311,7 @@ if (Meteor.isServer) {
   Selected.remove({});
 
   for(let i = 0; i < 100; i++) {
-    Numbers.insert({ num: i });
+    Numbers.insert({ num: i, owner: i });
   }
 }
 
@@ -371,3 +431,46 @@ export const updateSelected = createMethod({
   }
 });
 
+async function checkOwnership(args) {
+  const { ownerId } = args;
+
+  const numberOwner = Numbers.findOneAsync({ownerId});
+
+  if (!numberOwner) {
+    throw new Meteor.Error('not-authorized')
+  }
+
+  return args;
+};
+
+
+async function insertSelected({num, ownerId}) {
+  const _id = (num * 3).toString();
+
+  const selectedId = await Selected.insertAsync({
+    _id,
+    num,
+    ownerId
+  });
+
+  return selectedId
+};
+
+export const addSelectedAsyncWithOwnerPipe = createMethod({
+  name: 'addSelectedAsyncWithOwnerPipe',
+  schema: {num: Number, ownerId: String},
+  isPublic: true
+}).pipe(
+  checkOwnership,
+  insertSelected
+)
+
+export const addSelectedAsyncWithOwner = createMethod({
+  name: 'addSelectedAsyncWithOwner',
+  schema: {num: Number, ownerId: String},
+  isPublic: true,
+  async run(args) {
+    await checkOwnership(args);
+    return await insertSelected(args);
+  }
+});

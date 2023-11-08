@@ -2,10 +2,12 @@
 
 Method is an easy way to create Meteor `methods` with Optimistic UI. It's built with Meteor 3.0 in mind. It's meant to be a drop in replacement for [Validated Method](https://github.com/meteor/validated-method) and comes with additional features:
 
-* Global before and after hooks for methods
+* Before and after hooks
+* Global before and after hooks for all methods
 * Pipe a series of functions
 * Authed by default (can be overriden)
 * Easily configure a rate limit
+* Optionally run a method on the server only
 * Attach the methods to Collections (optional)
 * Validate with a [jam:easy-schema](https://github.com/jamauro/easy-schema) schema or a custom validation function
 * No need to use `.call` to invoke the method as with `Validated Methods`
@@ -96,6 +98,74 @@ async function submit() {
 }
 ```
 
+### Before and after hooks
+You can execute functions `before` and / or `after` the method's `run` function. `before` and `after` accept a single function or an array of functions.
+
+When using `before`, the original input passed into the method will be available. The original input will be returned automatically from a `before` function so that `run` receives what was originally passed into the method.
+
+A great use case for using `before` is to verify the user has permission. For example:
+
+```js
+async function checkOwnership({ _id }) { // the original input passed into the method is available here. destructuring for _id since that's all we need for this function
+  const todo = await Todos.findOneAsync(_id);
+  if (todo.authorId !== Meteor.userId()) {
+    throw new Meteor.Error('not-authorized')
+  }
+
+  return true; // any code executed as a before function will automatically return the original input passed into the method so that they are available in the run function
+}
+
+export const markDone = createMethod({
+  name: 'todos.markDone',
+  schema: Todos.schema,
+  before: checkOwnership,
+  async run({ _id, done }) {
+    return await Todos.updateAsync(_id, {$set: {done}});
+  }
+});
+```
+
+When using `after`, the result of the `run` function will be available as the first argument and the second argument will contain the original input that was passed into the method. The result of the `run` function will be automatically returned from an `after` function.
+
+```js
+function exampleAfter(result, context) {
+  const { originalInput } = context; // the name of the method is also available here
+  // do stuff
+
+  return 'success'; // any code executed as an after function will automatically return the result of the run function
+}
+
+export const markDone = createMethod({
+  name: 'todos.markDone',
+  schema: Todos.schema,
+  before: checkOwnership,
+  async run({ _id, done }) {
+    return await Todos.updateAsync(_id, {$set: {done}});
+  },
+  after: exampleAfter
+});
+```
+
+**`Note`**: If you use arrow functions for `before`, `run`, or `after`, you'll lose access to `this` – the methodInvocation. You may be willing to sacrifice that because `this.userId` can be replaced by `Meteor.userId()` and `this.isSimulation` can be replaced by `Meteor.isClient` but it's worth noting.
+
+
+### Pipe a series of functions
+Instead of using `run`, you can compose functions using `.pipe`. Each function's output will be available as an input for the next function.
+
+```js
+// you'd define the functions in the pipe and then place them in the order you'd like them to execute within .pipe
+// be sure that each function in the pipe returns what the next one expects, otherwise you can add an arrow function to the pipe to massage the data, e.g. (input) => manipulate(input)
+
+export const create = createMethod({
+  name: 'todos.create',
+  schema: Todos.schema
+}).pipe(
+  checkOwnership,
+  createTodo,
+  sendNotification
+)
+```
+
 ### Attach methods to its Collection (optional)
 Instead of importing each method, you can attach them to the Collection. If you're using [jam:easy-schema](https://github.com/jamauro/easy-schema) be sure to attach the schema before attaching the methods.
 
@@ -164,21 +234,53 @@ Methods.configure({
 });
 ```
 
-### Pipe a series of functions
-Instead of using `run`, you can compose functions using `.pipe`. Each function's output will be available as an input for the next function.
+### Execute on the server only
+By default, methods are optimistic meaning they will execute on the client and then on the server. You can force a method to execute on the server only by setting `serverOnly: true`. It can be used with `run` or `.pipe`. Here's an example with `run`:
 
 ```js
-// you'd define the functions in the pipe and then place them in the order you'd like them to execute within .pipe
-
 export const create = createMethod({
   name: 'todos.create',
-  schema: Todos.schema
-}).pipe(
-  checkOwnership,
-  createTodo,
-  sendNotification
-)
+  schema: Todos.schema,
+  serverOnly: true,
+  async run(args) {
+    // the code here will execute only on the server
+  }
+});
 ```
+
+#### Security note
+**`Important`**: Since Meteor does not currently support tree shaking, the code inside `run` function or `.pipe` would still be shipped to the client. If you want to prevent this, you have a couple of options:
+
+1. Import function(s) from a file within a `/server` folder. Any code imported from a `/server` folder will not be shipped to the client. The `/server` folder can be located anywhere within your project's file structure and you can have multiple `/server` folders. For example, you can co-locate with your collection folder, e.g. /imports/api/todos/server/, or it can be at the root of your project. See [secret code](https://guide.meteor.com/security.html#secret-code) for more info.
+
+```js
+export const create = createMethod({
+  name: 'todos.create',
+  schema: Todos.schema,
+  serverOnly: true,
+  async run(args) {
+    import { serverFunction } from '/server/serverFunction';
+
+    serverFunction(args);
+  }
+});
+```
+
+2. Dynamically import function(s). These do not have to be inside a `/server` folder. This will also prevent the code from being shipped to the client and being inspectable via the browser console. Having said that, if you have some really secret code, #1 is recommended.
+
+```js
+export const create = createMethod({
+  name: 'todos.create',
+  schema: Todos.schema,
+  serverOnly: true,
+  async run(args) {
+    const { serviceFunction } = await import('./services');
+
+    serviceFunction(args);
+  }
+});
+```
+
 
 ### Changing authentication rules
 By default, all methods will be protected by authentication, meaning they will throw an error if there is *not* a logged-in user. You can change this for an individual method by setting `isPublic: true`. See [Configuring](#configuring-optional) below to change it for all methods.
@@ -293,3 +395,6 @@ Methods.configure({
   after: server(log)
 });
 ```
+
+## Coming from `Validated Method`?
+You may be familiar with `mixins` and wondering where they are. With the features of this package - authenticated by default, `before` / `after` hooks, `.pipe` - your mixin code may no longer be needed or can be simplified. If you have another use case where your mixin doesn't translate, I'd love to hear it. Open a new discussion and let's chat.

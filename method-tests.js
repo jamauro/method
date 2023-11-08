@@ -16,6 +16,11 @@ import {
   errorMethod,
   wait100,
   fastMethod,
+  beforeMethod,
+  beforeArrayMethod,
+  afterMethod,
+  afterArrayMethod,
+  serverOnly,
   configMethod,
   simplePipeline,
   asyncPipeline,
@@ -30,7 +35,10 @@ import {
   Selected,
   globalBefore,
   globalAfter,
-  setOptions
+  setOptions,
+  checkOwnership,
+  addSelectedAsyncWithOwner,
+  addSelectedAsyncWithOwnerPipe
 } from './test-methods.js';
 
 Tinytest.addAsync('methods - basic', async (test) => {
@@ -139,6 +147,40 @@ Tinytest.addAsync('methods - async sequential', async (test) => {
   test.equal(order, ['wait100', 'fastMethod']);
 });
 
+Tinytest.addAsync('methods - beforeMethod', async (test) => {
+  const result = await beforeMethod({num: 10})
+
+  test.equal(result, 20);
+});
+
+Tinytest.addAsync('methods - beforeArrayMethod', async (test) => {
+  const result = await beforeArrayMethod({num: 20})
+
+  test.equal(result, 40);
+});
+
+Tinytest.addAsync('methods - afterMethod', async (test) => {
+  const result = await afterMethod({num: 10})
+
+  test.equal(result, 30);
+});
+
+Tinytest.addAsync('methods - afterArrayMethod', async (test) => {
+  const result = await afterArrayMethod({num: 20})
+
+  test.equal(result, 60);
+});
+
+Tinytest.addAsync('methods - serverOnly', async (test) => {
+  const result = await serverOnly({num: 5})
+
+  if (Meteor.isClient) {
+    test.equal(result, undefined);
+  } else {
+    test.equal(result, 15);
+  }
+});
+
 Tinytest.addAsync('methods - pipeline', async (test) => {
   const result = await simplePipeline(10)
 
@@ -221,6 +263,20 @@ Tinytest.addAsync('methods - rollBack', async (test) => {
   }
 });
 
+Tinytest.addAsync('methods - check ownership pipe', async (test) => {
+  try {
+    const result = await addSelectedAsyncWithOwnerPipe({num: 2, ownerId: '12'})
+    test.equal(result, '6')
+  } catch(e) {
+    console.error(e)
+  }
+});
 
-
-
+Tinytest.addAsync('methods - check ownership run', async (test) => {
+  try {
+    const result = await addSelectedAsyncWithOwner({num: 4, ownerId: '20'})
+    test.equal(result, '12')
+  } catch(e) {
+    console.error(e)
+  }
+});

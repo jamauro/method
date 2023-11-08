@@ -64,12 +64,13 @@ Mongo.Collection.prototype.attachMethods = async function (methods = undefined) 
 
 const check = Package['jam:easy-schema'] ? require('meteor/jam:easy-schema').check : undefined;
 
-export const createMethod = ({ name, schema = undefined, validate = undefined, run = undefined, rateLimit = undefined, isPublic = false, options = {} }) => {
+export const createMethod = ({ name, schema = undefined, validate = undefined, before = [], after = [], run = undefined, rateLimit = undefined, isPublic = false, serverOnly = false, options = {} }) => {
   if (!name) {
     throw new Error('You must pass in a name when creating a method')
   }
 
   let pipeline = [];
+  let isPipe;
 
   if (typeof run === 'function') {
     pipeline = [run];
@@ -84,17 +85,19 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, r
 
   Meteor.methods({
     [name]: async function(data) {
+      if (serverOnly && Meteor.isClient) return;
+
       if (pipeline.length === 0) {
-        throw new Error(`Pipeline or run function for ${name} never configured`);
+        throw new Error(`.pipe or run function for ${name} never configured`);
+      }
+
+      if (!schema && !validate) {
+        throw new Error(`You must pass in a schema or a validate function for ${name}`)
       }
 
       const methodInvocation = this;
       let onResult = [];
       let onError = [];
-
-      if (!schema && !validate) {
-        throw new Error(`You must pass in a schema or a validate function for ${name}`)
-      }
 
       if (schema) {
         if (!check) {
@@ -105,7 +108,6 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, r
       } else {
         validate(data); // allow for a custom validate function
       }
-
 
       const context = {
         originalInput: data,
@@ -124,17 +126,25 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, r
           throw new Error('Not logged in')
         }
 
-        const { before = [], after = [] } = Methods.config;
+        const { before: beforeAll = [], after: afterAll = [] } = Methods.config;
+        const beforePipeline = [...(Array.isArray(beforeAll) ? beforeAll : [beforeAll]), ...(Array.isArray(before) ? before : [before])];
+        const afterPipeline = [...(Array.isArray(after) ? after : [after]), ...(Array.isArray(afterAll) ? afterAll : [afterAll])];
 
-        let input = data;
         const fullPipeline = [
-          ...(Array.isArray(before) ? before : [before]),
+          ...beforePipeline,
           ...pipeline,
-          ...(Array.isArray(after) ? after : [after])
+          ...afterPipeline
         ];
 
+        let input = data;
+        let runResult;
+
         for (const func of fullPipeline) {
-          input = await func.call(methodInvocation, input, context) || input; // if you return nothing from one of the steps in the pipeline, it will continue with the previous input
+          const result = await func.call(methodInvocation, input, context);
+          if (func === run) {
+            runResult = result
+          }
+          input = (isPipe ? result : (beforePipeline.includes(func) ? input : afterPipeline.includes(func) ? runResult : result)) || input; // if you return nothing from one of the steps in the pipeline, it will continue with the previous input
         }
 
         return input;
@@ -188,6 +198,7 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, r
     return call;
   }
 
+  isPipe = true;
   return {
     pipe(..._pipeline) {
       pipeline = _pipeline
