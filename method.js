@@ -6,6 +6,7 @@ import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
 const config = {
   before: [],
   after: [],
+  serverOnly: false,
   options: {
     // Make it possible to get the ID of an inserted item
     returnStubValue: true,
@@ -22,6 +23,7 @@ const configure = options => {
   c(options, {
     before: Match.Maybe(Match.OneOf([Function], Function)),
     after: Match.Maybe(Match.OneOf([Function], Function)),
+    serverOnly: Match.Maybe(Boolean),
     options: Match.Maybe({
       returnStubValue: Match.Maybe(Boolean),
       throwStubExceptions: Match.Maybe(Boolean)
@@ -83,90 +85,98 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, b
 
   const checkLoggedIn = isPublic ? false : !Methods.config.arePublic;
 
-  Meteor.methods({
-    [name]: async function(data) {
-      if (serverOnly && Meteor.isClient) return;
+  const method = async function(data) {
+    if (pipeline.length === 0) {
+      throw new Error(`.pipe or run function for ${name} never configured`);
+    }
 
-      if (pipeline.length === 0) {
-        throw new Error(`.pipe or run function for ${name} never configured`);
+    if (!schema && !validate) {
+      throw new Error(`You must pass in a schema or a validate function for ${name}`)
+    }
+
+    const methodInvocation = this;
+    let onResult = [];
+    let onError = [];
+
+    if (schema) {
+      if (!check) {
+        throw new Error(`You must add the jam:easy-schema package to use a schema`)
       }
 
-      if (!schema && !validate) {
-        throw new Error(`You must pass in a schema or a validate function for ${name}`)
-      }
+      check(data, schema);
+    } else {
+      validate(data); // allow for a custom validate function
+    }
 
-      const methodInvocation = this;
-      let onResult = [];
-      let onError = [];
-
-      if (schema) {
-        if (!check) {
-          throw new Error(`You must add the jam:easy-schema package to use a schema`)
-        }
-
-        check(data, schema);
-      } else {
-        validate(data); // allow for a custom validate function
-      }
-
-      const context = {
-        originalInput: data,
-        type: 'method',
-        name,
-        onResult(callback) {
-          onResult.push(callback);
-        },
-        onError(callback) {
-          onError.push(callback);
-        }
-      }
-
-      async function execute() {
-        if (checkLoggedIn && !methodInvocation.userId) {
-          throw new Error('Not logged in')
-        }
-
-        const { before: beforeAll = [], after: afterAll = [] } = Methods.config;
-        const beforePipeline = [...(Array.isArray(beforeAll) ? beforeAll : [beforeAll]), ...(Array.isArray(before) ? before : [before])];
-        const afterPipeline = [...(Array.isArray(after) ? after : [after]), ...(Array.isArray(afterAll) ? afterAll : [afterAll])];
-
-        const fullPipeline = [
-          ...beforePipeline,
-          ...pipeline,
-          ...afterPipeline
-        ];
-
-        let input = data;
-        let runResult;
-
-        for (const func of fullPipeline) {
-          const result = await func.call(methodInvocation, input, context);
-          if (func === run) {
-            runResult = result
-          }
-          input = (isPipe ? result : (beforePipeline.includes(func) ? input : afterPipeline.includes(func) ? runResult : result)) || input; // if you return nothing from one of the steps in the pipeline, it will continue with the previous input
-        }
-
-        return input;
-      }
-
-      try {
-        let result = await execute();
-
-        onResult.forEach(callback => { // this allows you to get the final result of the pipeline and do things with it (See log function)
-          callback(result);
-        });
-
-        return result;
-      } catch (error) {
-        error = onError.reduce((err, callback) => {
-          return callback(err) ?? err;
-        }, error);
-
-        throw error;
+    const context = {
+      originalInput: data,
+      type: 'method',
+      name,
+      onResult(callback) {
+        onResult.push(callback);
+      },
+      onError(callback) {
+        onError.push(callback);
       }
     }
-  });
+
+    async function execute() {
+      if (checkLoggedIn && !methodInvocation.userId) {
+        throw new Error('Not logged in')
+      }
+
+      const { before: beforeAll = [], after: afterAll = [] } = Methods.config;
+      const beforePipeline = [...(Array.isArray(beforeAll) ? beforeAll : [beforeAll]), ...(Array.isArray(before) ? before : [before])];
+      const afterPipeline = [...(Array.isArray(after) ? after : [after]), ...(Array.isArray(afterAll) ? afterAll : [afterAll])];
+
+      const fullPipeline = [
+        ...beforePipeline,
+        ...pipeline,
+        ...afterPipeline
+      ];
+
+      let input = data;
+      let runResult;
+
+      for (const func of fullPipeline) {
+        const result = await func.call(methodInvocation, input, context);
+        if (func === run) {
+          runResult = result
+        }
+        input = (isPipe ? result : (beforePipeline.includes(func) ? input : afterPipeline.includes(func) ? runResult : result)) || input; // if you return nothing from one of the steps in the pipeline, it will continue with the previous input
+      }
+
+      return input;
+    }
+
+    try {
+      let result = await execute();
+
+      onResult.forEach(callback => { // this allows you to get the final result of the pipeline and do things with it (See log function)
+        callback(result);
+      });
+
+      return result;
+    } catch (error) {
+      error = onError.reduce((err, callback) => {
+        return callback(err) ?? err;
+      }, error);
+
+      throw error;
+    }
+  };
+
+  if (serverOnly || Methods.config.serverOnly) {
+    if (Meteor.isServer) {
+      Meteor.methods({
+        [name]: method
+      });
+    }
+  } else {
+    Meteor.methods({
+      [name]: method
+    });
+  }
 
   if (rateLimit) {
     DDPRateLimiter?.addRule({

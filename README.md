@@ -248,6 +248,8 @@ export const create = createMethod({
 });
 ```
 
+You can also set all methods to be `serverOnly`. See [Configuring](#configuring-optional) below.
+
 #### Security note
 **`Important`**: Since Meteor does not currently support tree shaking, the code inside `run` function or `.pipe` would still be shipped to the client. If you want to prevent this, you have a couple of options:
 
@@ -321,6 +323,7 @@ Here are the defaults:
 const config = {
   before: [], // global before function(s) that will run before all methods
   after: [], // global after function(s) that will run after all methods
+  serverOnly: false // globally make all methods serverOnly, aka disable Optimistic UI, by setting to true
   options: {
     returnStubValue: true, // make it possible to get the ID of an inserted item on the client before the server finishes
     throwStubExceptions: true,  // don't call the server method if the client stub throws an error, so that we don't end up doing validations twice
