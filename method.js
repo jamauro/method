@@ -1,7 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { check as c, Match } from 'meteor/check';
 import { Mongo } from 'meteor/mongo';
-import { DDPRateLimiter } from 'meteor/ddp-rate-limiter';
 
 const config = {
   before: [],
@@ -178,8 +177,10 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, b
     });
   }
 
-  if (rateLimit) {
-    DDPRateLimiter?.addRule({
+  if (rateLimit && Meteor.isServer) {
+    const DDPRateLimiter = require('meteor/ddp-rate-limiter').DDPRateLimiter;
+
+    DDPRateLimiter.addRule({
       type: 'method',
       name,
       clientAddress() { return true },
