@@ -177,8 +177,10 @@ import { schema } from './schema';
 export const Todos = new Mongo.Collection('todos');
 
 Todos.attachSchema(schema); // if you're using jam:easy-schema
-const methods = require('./methods.js');
-Todos.attachMethods(methods);
+(async() => {
+  const methods = await import('./methods.js') // dynamic import is recommended
+  Todos.attachMethods(methods);
+})();
 ```
 
 With the methods attached you'll use them like this on the client:
@@ -195,8 +197,8 @@ async function submit() {
 }
 ```
 
-#### Dynamically import attached methods (optional)
-You can also dynamically import your attached methods to reduce the initial bundle size on the client.
+#### Automatically dynamic import attached methods (optional)
+You can also automatically dynamic import your attached methods to reduce the initial bundle size on the client.
 
 You'll need to add a file to your project, e.g. `/imports/register-dynamic-imports.js` and import this file on both the client and the server near the top of its `mainModule`, e.g. `/client/main.js` and `/server/main.js`. Here's an example of the file:
 
@@ -234,8 +236,29 @@ Methods.configure({
 });
 ```
 
-### Execute on the server only
-By default, methods are optimistic meaning they will execute on the client and then on the server. You can force a method to execute on the server only by setting `serverOnly: true`. It can be used with `run` or `.pipe`. Here's an example with `run`:
+### Executing code on the server only
+By default, methods are optimistic meaning they will execute on the client and then on the server. If there's only part of the method that should execute on the server and not on the client, then simply wrap that piece of code in a `if (Meteor.isServer)` block. This way you can still maintain the benefits of Optimistic UI. For example:
+
+```js
+export const create = createMethod({
+  name: 'todos.create',
+  schema: Todos.schema,
+  async run(args) {
+    // rest of your function
+    // code running on both client and server
+    if (Meteor.isServer) {
+      // code running on the server only
+      import { secretCode } from '/server/secretCode'; // since it's in a /server folder the code will not be shipped to the client
+      // do something with secretCode
+    }
+
+    // code running on both client and server
+    return Todos.insertAsync(todo)
+  }
+});
+```
+
+If you prefer, you can force the entire method to execute on the server only by setting `serverOnly: true`. It can be used with `run` or `.pipe`. Here's an example with `run`:
 
 ```js
 export const create = createMethod({
@@ -243,7 +266,7 @@ export const create = createMethod({
   schema: Todos.schema,
   serverOnly: true,
   async run(args) {
-    // the code here will execute only on the server
+    // all code here will execute only on the server
   }
 });
 ```
@@ -251,9 +274,11 @@ export const create = createMethod({
 You can also set all methods to be `serverOnly`. See [Configuring](#configuring-optional) below.
 
 #### Security note
-**`Important`**: Since Meteor does not currently support tree shaking, the code inside `run` function or `.pipe` would still be shipped to the client. If you want to prevent this, you have a couple of options:
+**`Important`**: Since Meteor does not currently support tree shaking, the contents of the code inside `run` function or `.pipe` could still be visible to the client even if you use `if (Meteor.isServer)` or `serverOnly: true`. To prevent this, you have these options:
 
-1. Import function(s) from a file within a `/server` folder. Any code imported from a `/server` folder will not be shipped to the client. The `/server` folder can be located anywhere within your project's file structure and you can have multiple `/server` folders. For example, you can co-locate with your collection folder, e.g. `/imports/api/todos/server/`, or it can be at the root of your project. See [Secret server code](https://guide.meteor.com/security.html#secret-code) for more info.
+1. Attach methods to its Collection with a dynamic import as shown above [Attach methods to its Collection (optional)](#attach-methods-to-its-collection-optional)
+
+2. Import function(s) from a file within a `/server` folder. Any code imported from a `/server` folder will not be shipped to the client. The `/server` folder can be located anywhere within your project's file structure and you can have multiple `/server` folders. For example, you can co-locate with your collection folder, e.g. `/imports/api/todos/server/`, or it can be at the root of your project. See [Secret server code](https://guide.meteor.com/security.html#secret-code) for more info.
 
 ```js
 export const create = createMethod({
@@ -268,7 +293,7 @@ export const create = createMethod({
 });
 ```
 
-2. Dynamically import function(s). These do not have to be inside a `/server` folder. This will also prevent the code from being shipped to the client and being inspectable via the browser console. Having said that, if you have some really secret code, #1 is recommended.
+3. Dynamically import function(s). These do not have to be inside a `/server` folder. This will also prevent the code from being shipped to the client and being inspectable via the browser console.
 
 ```js
 export const create = createMethod({
@@ -282,7 +307,6 @@ export const create = createMethod({
   }
 });
 ```
-
 
 ### Changing authentication rules
 By default, all methods will be protected by authentication, meaning they will throw an error if there is *not* a logged-in user. You can change this for an individual method by setting `isPublic: true`. See [Configuring](#configuring-optional) below to change it for all methods.
