@@ -293,7 +293,7 @@ export const create = createMethod({
 });
 ```
 
-3. Dynamically import function(s). These do not have to be inside a `/server` folder. This will also prevent the code from being shipped to the client and being inspectable via the browser console.
+3. Dynamically import function(s). These do not have to be inside a `/server` folder. This will prevent the code being inspectable via the browser console.
 
 ```js
 export const create = createMethod({
@@ -347,13 +347,13 @@ Here are the global defaults:
 const config = {
   before: [], // global before function(s) that will run before all methods
   after: [], // global after function(s) that will run after all methods
-  serverOnly: false // globally make all methods serverOnly, aka disable Optimistic UI, by setting to true
+  serverOnly: false, // globally make all methods serverOnly, aka disable Optimistic UI, by setting to true
   options: {
     returnStubValue: true, // make it possible to get the ID of an inserted item on the client before the server finishes
     throwStubExceptions: true,  // don't call the server method if the client stub throws an error, so that we don't end up doing validations twice
   },
   arePublic: false, // by default all methods will be protected by authentication, override it for all methods by setting this to true
-  basePath: `/imports/api`, // used when dynamically importing methods
+  basePath: `/imports/api` // used when dynamically importing methods
 };
 ````
 
