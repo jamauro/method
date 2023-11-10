@@ -342,7 +342,7 @@ export const create = createMethod({
 ## Configuring (optional)
 If you like the defaults, then you won't need to configure anything. But there is some flexibility in how you use this package.
 
-Here are the defaults:
+Here are the global defaults:
 ```js
 const config = {
   before: [], // global before function(s) that will run before all methods
@@ -357,7 +357,7 @@ const config = {
 };
 ````
 
-To change the defaults, use:
+To change the global defaults, use:
 ```js
 // can be configured on client-side and server-side (in a file imported on both client and server)
 // or just server-side depending on your use case
