@@ -40,38 +40,67 @@ Mongo.Collection.prototype.attachMethods = async function (methods = undefined) 
   // Attaching methods to the collection
   // Methods can't have names insert, update, or remove because they'll interfere with the one's that Meteor autogenerates for each Collection. Kind of unfortunate.
   // We're only attaching methods on the client because that's where they should be called from. Technically they can be called frmo the server but it's considered bad practice so this enforces that they won't be available server side on the Collection. If needed, any server side logic should be pulled out into a function that can be called from other server functions.
-  try {
-    if (Meteor.isServer) {
-      return;
-    }
-
-    const methodsToAttach = methods ? methods : await import(`${config.basePath}/${this._name}/methods`);
-    if (!methodsToAttach) {
-      throw new Error('No methods found');
-    }
-
-    const matchedRestrictedNames = Object.keys(methodsToAttach).filter(key => restrictedNames.includes(key));
-    if (matchedRestrictedNames.length) {
-      throw new Error(`Cannot have methods named "${matchedRestrictedNames.join(', ')}" on ${this._name} collection`)
-    }
-
-    for (key in methodsToAttach) {
-      this[key] = methodsToAttach[key]
-    }
-  } catch (error) {
-    console.error(error)
+  if (Meteor.isServer) {
+    return;
   }
+
+  const methodsToAttach = methods ? methods : await import(`${config.basePath}/${this._name}/methods`);
+  if (!methodsToAttach) {
+    throw new Error('No methods found to attach');
+  }
+
+  const matchedRestrictedNames = Object.keys(methodsToAttach).filter(key => restrictedNames.includes(key));
+  if (matchedRestrictedNames.length) {
+    throw new Error(`Cannot have methods named "${matchedRestrictedNames.join(', ')}" on ${this._name} collection`)
+  }
+
+  for (key in methodsToAttach) {
+    this[key] = methodsToAttach[key]
+  }
+
+  return;
 };
 
-const check = Package['jam:easy-schema'] ? require('meteor/jam:easy-schema').check : undefined;
+const check = Package['jam:easy-schema'] ? require('meteor/jam:easy-schema').check : c;
 
-export const createMethod = ({ name, schema = undefined, validate = undefined, before = [], after = [], run = undefined, rateLimit = undefined, isPublic = false, serverOnly = false, options = {} }) => {
+const getValidator = schema => {
+  if (typeof schema.parse === 'function') {
+    return data => schema.parse(data)
+  }
+
+  if (typeof schema.validate === 'function') {
+    return data => (schema.validate(data), data)
+  }
+
+  return data => (check(data, schema), data);
+};
+
+/**
+ * Create a method with specified properties.
+ * @template {import('zod').ZodTypeAny} S - The Zod schema type
+ * @param {{
+ *   name: string,
+ *   schema?: S | Object | any,
+ *   validate?: Function,
+ *   before?: Function|Array<Function>,
+ *   after?: Function|Array<Function>,
+ *   run?: Function,
+ *   rateLimit?: { limit: number, internal: number },
+ *   isPublic?: boolean,
+ *   serverOnly?: boolean,
+ *   options?: Object
+ * }} config - Options for creating the method.
+ * @returns {Function | { pipe: Function }} - The method function or an object with a `pipe` method
+ */
+export const createMethod = ({ name, schema = undefined, validate: v = undefined, before = [], after = [], run = undefined, rateLimit = undefined, isPublic = false, serverOnly = false, options = {} }) => {
   if (!name) {
     throw new Error('You must pass in a name when creating a method')
   }
+  if (!schema && !v || schema && v) {
+    throw new Error(`You must pass in either a schema or a validate function${schema && v ? ', not both,' : ''} for method '${name}'`)
+  }
 
   let pipeline = [];
-  let isPipe;
 
   if (typeof run === 'function') {
     pipeline = [run];
@@ -83,32 +112,28 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, b
   };
 
   const checkLoggedIn = isPublic ? false : !Methods.config.arePublic;
+  const validate = schema ? getValidator(schema) : v;
 
+  /**
+   * @template T
+   * @param {T} data - The input data to be validated.
+   */
   const method = async function(data) {
     if (pipeline.length === 0) {
       throw new Error(`.pipe or run function for ${name} never configured`);
-    }
-
-    if (!schema && !validate) {
-      throw new Error(`You must pass in a schema or a validate function for ${name}`)
     }
 
     const methodInvocation = this;
     let onResult = [];
     let onError = [];
 
-    if (schema) {
-      if (!check) {
-        throw new Error(`You must add the jam:easy-schema package to use a schema`)
-      }
-
-      check(data, schema);
-    } else {
-      validate(data); // allow for a custom validate function
-    }
+    /**
+     * @type {import('zod').output<S> | T}
+     */
+    const validatedData = schema ? validate(data) : (validate(data), data);
 
     const context = {
-      originalInput: data,
+      originalInput: validatedData,
       type: 'method',
       name,
       onResult(callback) {
@@ -134,7 +159,7 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, b
         ...afterPipeline
       ];
 
-      let input = data;
+      let input = validatedData;
       let runResult;
 
       for (const func of fullPipeline) {
@@ -142,7 +167,7 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, b
         if (func === run) {
           runResult = result
         }
-        input = (isPipe ? result : (beforePipeline.includes(func) ? input : afterPipeline.includes(func) ? runResult : result)) || input; // if you return nothing from one of the steps in the pipeline, it will continue with the previous input
+        input = (run ? (beforePipeline.includes(func) ? input : afterPipeline.includes(func) ? runResult : result) : result) || input; // if you return nothing from one of the steps in the pipeline, it will continue with the previous input
       }
 
       return input;
@@ -209,7 +234,6 @@ export const createMethod = ({ name, schema = undefined, validate = undefined, b
     return call;
   }
 
-  isPipe = true;
   return {
     pipe(..._pipeline) {
       pipeline = _pipeline

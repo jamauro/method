@@ -9,7 +9,7 @@ Method is an easy way to create Meteor `methods` with Optimistic UI. It's built 
 * Easily configure a rate limit
 * Optionally run a method on the server only
 * Attach the methods to Collections (optional)
-* Validate with a [jam:easy-schema](https://github.com/jamauro/easy-schema) schema or a custom validation function
+* Validate with one of the supported schema packages or a custom validate function
 * No need to use `.call` to invoke the method as with `Validated Methods`
 
 ## Usage
@@ -20,7 +20,7 @@ Method is an easy way to create Meteor `methods` with Optimistic UI. It's built 
 ### Create a method
 `name` is required and will be how Meteor's internals identifies it.
 
-`schema` will automatically validate a [jam:easy-schema](https://github.com/jamauro/easy-schema) schema.
+`schema` will automatically validate using a [supported schema](#supported-schemas).
 
 `run` will be executed when the method is called.
 
@@ -29,7 +29,7 @@ import { createMethod } from 'meteor/jam:method'; // can import { Methods } from
 
 export const create = createMethod({
   name: 'todos.create',
-  schema: Todos.schema, // only jam:easy-schema schemas are supported at this time
+  schema: Todos.schema, // using jam:easy-schema in this example
   run({ text }) {
     const todo = {
       text,
@@ -43,7 +43,27 @@ export const create = createMethod({
 });
 ```
 
-You can use a custom validation function instead if you'd like:
+#### Supported schemas
+Currently, these schemas are supported:
+* [jam:easy-schema](https://github.com/jamauro/easy-schema)
+* [check](https://docs.meteor.com/api/check.html)
+* [zod](https://github.com/colinhacks/zod)
+* [simpl-schema](https://github.com/longshotlabs/simpl-schema)
+
+Here's a quick example of each one's syntax. They vary in features so pick the one that best fits your needs.
+```js
+// jam:easy-schema. you'll attach to a Collection so you can reference one {Collection}.schema in your methods
+const schema = {text: String, isPrivate: Optional(Boolean)}
+// check
+const schema = {text: String, isPrivate: Match.Maybe(Boolean)}
+// zod
+const schema = z.object({text: z.string(), isPrivate: z.boolean().optional()})
+// simpl-schema
+const schema = new SimpleSchema({text: String, isPrivate: {type: Boolean, optional: true}})
+```
+
+#### Custom validate function
+If you're not using one of the supported schemas, you can use `validate` to pass in a custom validation function:
 ```js
 // import your schema from somewhere
 // import your validator function from somewhere
@@ -71,7 +91,7 @@ It also supports using `*Async` Collection methods, e.g.:
 ```js
 export const create = createMethod({
   name: 'todos.create',
-  schema: Todos.schema, // only jam:easy-schema schemas are supported at this time
+  schema: Todos.schema,
   async run({ text }) {
     const todo = {
       text,
@@ -338,6 +358,35 @@ export const create = createMethod({
   }
 });
 ```
+
+### Options for Meteor.applyAsync
+When called, the method uses [Meteor.applyAsync](https://docs.meteor.com/api/methods#Meteor-applyAsync) under the hood to execute your `run` function or `.pipe` function(s). `Meteor.applyAsync` takes a few options which can be used to alter the way Meteor handles the method. If you want to change the defaults or include other supported options, pass in `options` when creating the method.
+
+```js
+export const create = createMethod({
+  name: 'todos.create',
+  schema: Todos.schema,
+  options: {
+    // ... //
+  },
+  async run({ text }) {
+    // ... //
+  }
+});
+```
+
+By default, this package uses the following `options`:
+```js
+{
+  // Make it possible to get the ID of an inserted item
+  returnStubValue: true,
+
+  // Don't call the server method if the client stub throws an error, so that we don't end
+  // up doing validations twice
+  throwStubExceptions: true,
+};
+```
+See [Configuring](#configuring-optional) below to set `options` for all methods.
 
 ## Configuring (optional)
 If you like the defaults, then you won't need to configure anything. But there is some flexibility in how you use this package.

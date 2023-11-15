@@ -1,21 +1,50 @@
 import { Mongo } from 'meteor/mongo';
-import { check } from 'meteor/check';
-import { createMethod, Methods } from 'meteor/jam:method'; // Method
-import { Any } from 'meteor/jam:easy-schema';
+import { check, Match } from 'meteor/check';
+import { createMethod, Methods } from 'meteor/jam:method';
 import assert from 'assert';
+import { z } from 'zod';
+import SimpleSchema from 'simpl-schema';
+
+const Any = Package['jam:easy-schema'] ? require('meteor/jam:easy-schema').Any : Match.Any;
 
 export const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-export const sleep = async ms => {
-  await wait(ms)
-  return 20
-}
 
 export const defaultAuthed = createMethod({
   name: 'defaultAuthed',
   schema: Any,
   run() {
     return 5;
+  }
+});
+
+export const checkSchema = createMethod({
+  name: 'checkSchema',
+  schema: {num: Number, isPrivate: Match.Maybe(Boolean)},
+  isPublic: true,
+  async run({ num, isPrivate }) {
+    if (isPrivate) {
+      return num * 2;
+    }
+
+    return num
+  }
+});
+
+export const zodSchema = createMethod({
+  name: 'zodSchema',
+  schema: z.object({num: z.number()}),
+  isPublic: true,
+  async run({ num }) {
+    return num * 10
+  }
+});
+
+export const simpleSchema = createMethod({
+  name: 'simpleSchema',
+  schema: new SimpleSchema({num: Number}),
+  isPublic: true,
+  async run({ num }) {
+    return num * 20
   }
 });
 

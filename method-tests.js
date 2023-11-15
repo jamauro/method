@@ -1,13 +1,14 @@
 // Import Tinytest from the tinytest Meteor package.
-import { Tinytest } from "meteor/tinytest";
+import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
 
 import {
-  wait,
-  sleep,
   schema,
   run,
   defaultAuthed,
+  checkSchema,
+  zodSchema,
+  simpleSchema,
   customValidate,
   test1,
   testAsync,
@@ -60,6 +61,26 @@ Tinytest.addAsync('methods - authed by default', async (test) => {
   } catch(e) {
     test.equal(e.message, 'Not logged in')
   }
+});
+
+Tinytest.addAsync('methods - check schema', async (test) => {
+  const result = await checkSchema({ num: 25, isPrivate: true });
+  test.equal(result, 50);
+});
+
+Tinytest.addAsync('methods - check schema optional', async (test) => {
+  const result = await checkSchema({ num: 25 });
+  test.equal(result, 25);
+});
+
+Tinytest.addAsync('methods - zod schema', async (test) => {
+  const result = await zodSchema({ num: 4 });
+  test.equal(result, 40);
+});
+
+Tinytest.addAsync('methods - SimpleSchema', async (test) => {
+  const result = await simpleSchema({ num: 5 });
+  test.equal(result, 100);
 });
 
 Tinytest.addAsync('methods - custom validate', async (test) => {
