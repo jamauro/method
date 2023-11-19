@@ -108,7 +108,8 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
 
   const applyOptions = {
     ...Methods.config.options,
-    ...options
+    ...options,
+    isFromCallAsync: true // mimic callAsync through isFromCallAsync
   };
 
   const checkLoggedIn = isPublic ? false : !Methods.config.arePublic;
@@ -217,13 +218,19 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
   function call(...args) {
     if (Meteor.isClient) {
       return new Promise((resolve, reject) => {
-        Meteor.applyAsync(name, args, applyOptions, (error, result) => {
+        const stub = Meteor.applyAsync(name, args, applyOptions, (error, result) => {
           if (error) {
             reject(error)
           } else {
             resolve(result)
           }
         });
+
+        // catch exceptions on the stub and re-route them to the promise wrapper
+        if (applyOptions.throwStubExceptions) {
+          const isThenable = stub && typeof stub.then === 'function';
+          if (isThenable) stub.catch(err => reject(err));
+        }
       });
     }
 

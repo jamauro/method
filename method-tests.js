@@ -113,7 +113,6 @@ if (Meteor.isClient) {
   });
 }
 
-
 if (Meteor.isClient) {
   // for some reason this test will fail when run with the other tests, but if it's run by itself it passes
   // rateLimit also works when used so I think it must have something to do with Tinytest
