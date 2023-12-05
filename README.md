@@ -402,7 +402,8 @@ const config = {
     throwStubExceptions: true,  // don't call the server method if the client stub throws an error, so that we don't end up doing validations twice
   },
   arePublic: false, // by default all methods will be protected by authentication, override it for all methods by setting this to true
-  basePath: `/imports/api` // used when dynamically importing methods
+  basePath: `/imports/api`, // used when dynamically importing methods
+  loggedOutError: new Meteor.Error('logged-out', 'You must be logged in') // customize the logged out error
 };
 ````
 

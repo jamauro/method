@@ -59,7 +59,7 @@ Tinytest.addAsync('methods - authed by default', async (test) => {
     const result = await defaultAuthed();
     test.equal('should never be reached', true);
   } catch(e) {
-    test.equal(e.message, 'Not logged in')
+    test.equal(e.reason, 'You must be logged in')
   }
 });
 

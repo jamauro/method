@@ -16,6 +16,7 @@ const config = {
   },
   arePublic: false,
   basePath: `/imports/api`,
+  loggedOutError: new Meteor.Error('logged-out', 'You must be logged in')
 };
 
 const configure = options => {
@@ -28,7 +29,8 @@ const configure = options => {
       throwStubExceptions: Match.Maybe(Boolean)
     }),
     arePublic: Match.Maybe(Boolean),
-    basePath: Match.Maybe(String)
+    basePath: Match.Maybe(String),
+    loggedOutError: Match.Maybe(Match.Where(e => e instanceof Meteor.Error || e instanceof Error))
   });
 
   return Object.assign(config, options);
@@ -36,7 +38,7 @@ const configure = options => {
 
 const restrictedNames = ['insert', 'insertAsync', 'update', 'updateAsync', 'remove', 'removeAsync', 'upsert', 'upsertAsync', 'insertOne', 'insertMany', 'updateOne', 'updateMany', 'deleteOne', 'deleteMany'];
 
-Mongo.Collection.prototype.attachMethods = async function (methods = undefined) {
+Mongo.Collection.prototype.attachMethods = async function(methods = undefined) {
   // Attaching methods to the collection
   // Methods can't have names insert, update, or remove because they'll interfere with the one's that Meteor autogenerates for each Collection. Kind of unfortunate.
   // We're only attaching methods on the client because that's where they should be called from. Technically they can be called frmo the server but it's considered bad practice so this enforces that they won't be available server side on the Collection. If needed, any server side logic should be pulled out into a function that can be called from other server functions.
@@ -85,7 +87,7 @@ const getValidator = schema => {
  *   before?: Function|Array<Function>,
  *   after?: Function|Array<Function>,
  *   run?: Function,
- *   rateLimit?: { limit: number, internal: number },
+ *   rateLimit?: { limit: number, interval: number },
  *   isPublic?: boolean,
  *   serverOnly?: boolean,
  *   options?: Object
@@ -147,7 +149,7 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
 
     async function execute() {
       if (checkLoggedIn && !methodInvocation.userId) {
-        throw new Error('Not logged in')
+        throw Methods.config.loggedOutError;
       }
 
       const { before: beforeAll = [], after: afterAll = [] } = Methods.config;
