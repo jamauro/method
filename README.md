@@ -409,8 +409,7 @@ const config = {
 
 To change the global defaults, use:
 ```js
-// can be configured on client-side and server-side (in a file imported on both client and server)
-// or just server-side depending on your use case
+// put this in a file that's imported on both the client and server
 import { Methods } from 'meteor/jam:method';
 
 Methods.configure({

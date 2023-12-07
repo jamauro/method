@@ -94,7 +94,7 @@ const getValidator = schema => {
  * }} config - Options for creating the method.
  * @returns {Function | { pipe: Function }} - The method function or an object with a `pipe` method
  */
-export const createMethod = ({ name, schema = undefined, validate: v = undefined, before = [], after = [], run = undefined, rateLimit = undefined, isPublic = false, serverOnly = false, options = {} }) => {
+export const createMethod = ({ name, schema = undefined, validate: v = undefined, before = [], after = [], run = undefined, rateLimit = undefined, isPublic = undefined, serverOnly = undefined, options = {} }) => {
   if (!name) {
     throw new Error('You must pass in a name when creating a method')
   }
@@ -114,7 +114,7 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
     isFromCallAsync: true // mimic callAsync through isFromCallAsync
   };
 
-  const checkLoggedIn = isPublic ? false : !Methods.config.arePublic;
+  const checkLoggedIn = !(isPublic ?? Methods.config.arePublic);
   const validate = schema ? getValidator(schema) : v;
 
   /**
@@ -193,7 +193,7 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
     }
   };
 
-  if (serverOnly || Methods.config.serverOnly) {
+  if (serverOnly ?? Methods.config.serverOnly) {
     if (Meteor.isServer) {
       Meteor.methods({
         [name]: method
