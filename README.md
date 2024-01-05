@@ -427,7 +427,7 @@ Methods.configure({
 ## Using with `jam:easy-schema`
 `jam:method` integrates with `jam:easy-schema` and offers a way to reduce boilerplate and make your methods even easier to write (though you can still use `createMethod` if you prefer).
 
-`*Note:` This assumes that you're attaching your methods to its collection. See [Attach methods to its Collection](#attach-methods-to-its-collection-optional).
+**`Note`**: This assumes that you're attaching your methods to its collection. See [Attach methods to its Collection](#attach-methods-to-its-collection-optional).
 
 For example, instead of writing this:
 ```js
@@ -490,7 +490,7 @@ export const aPublicMethod = open(async data => {
 #### close
 This is the opposite of `open`. It will check for a logged-in user.
 
-`Note`: by default, all methods require a logged-in user so if you stick with that default, then you won't need to use this function. See [Configuring](#configuring-optional).
+**`Note`**: by default, all methods require a logged-in user so if you stick with that default, then you won't need to use this function. See [Configuring](#configuring-optional).
 
 ```js
 import { close } from 'meteor/jam:method';
