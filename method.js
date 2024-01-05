@@ -89,10 +89,7 @@ export function close(fn) {
 const clearSymbols = fn => Object.getOwnPropertySymbols(fn).map(symbol => fn[symbol] = undefined);
 
 Mongo.Collection.prototype.attachMethods = function(methods, options = {}) {
-  if (Meteor.isServer) { // We're only attaching methods on the client because that's where they should be called from. Technically they can be called frmo the server but it's considered bad practice so this enforces that they won't be available server side on the Collection. If needed, any server side logic should be pulled out into a function that can be called from other server functions.
-    return;
-  }
-
+  // We're only attaching methods on the client because that's where they should be called from. Technically they can be called frmo the server but it's considered bad practice so this enforces that they won't be available server side on the Collection. If needed, any server side logic should be pulled out into a function that can be called from other server functions.
   const collection = this;
 
   Object.entries(methods).map(([k, v]) => {
@@ -101,6 +98,7 @@ Mongo.Collection.prototype.attachMethods = function(methods, options = {}) {
     }
 
     if (v.name === 'call') {
+      if (Meteor.isServer) return;
       return collection[k] = v;
     }
 
@@ -116,6 +114,7 @@ Mongo.Collection.prototype.attachMethods = function(methods, options = {}) {
       ...(open && { open })
     });
 
+    if (Meteor.isServer) return;
     return collection[k] = method;
   });
 };
