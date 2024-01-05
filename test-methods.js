@@ -1,6 +1,6 @@
 import { Mongo } from 'meteor/mongo';
 import { check, Match } from 'meteor/check';
-import { createMethod, Methods } from 'meteor/jam:method';
+import { createMethod, Methods, schema, open, close, server } from 'meteor/jam:method';
 import assert from 'assert';
 import { z } from 'zod';
 import SimpleSchema from 'simpl-schema';
@@ -20,7 +20,7 @@ export const defaultAuthed = createMethod({
 export const checkSchema = createMethod({
   name: 'checkSchema',
   schema: {num: Number, isPrivate: Match.Maybe(Boolean)},
-  isPublic: true,
+  open: true,
   async run({ num, isPrivate }) {
     if (isPrivate) {
       return num * 2;
@@ -33,7 +33,7 @@ export const checkSchema = createMethod({
 export const zodSchema = createMethod({
   name: 'zodSchema',
   schema: z.object({num: z.number()}),
-  isPublic: true,
+  open: true,
   async run({ num }) {
     return num * 10
   }
@@ -42,7 +42,7 @@ export const zodSchema = createMethod({
 export const simpleSchema = createMethod({
   name: 'simpleSchema',
   schema: new SimpleSchema({num: Number}),
-  isPublic: true,
+  open: true,
   async run({ num }) {
     return num * 20
   }
@@ -50,7 +50,7 @@ export const simpleSchema = createMethod({
 
 export const customValidate = createMethod({
   name: 'customValidate',
-  isPublic: true,
+  open: true,
   validate(args) {
     check(args, {num: Number})
   },
@@ -62,7 +62,7 @@ export const customValidate = createMethod({
 export const test1 = createMethod({
   name: 'test1',
   schema: Any,
-  isPublic: true,
+  open: true,
   run() {
     return 5;
   }
@@ -71,7 +71,7 @@ export const test1 = createMethod({
 export const testAsync = createMethod({
   name: 'testAsync',
   schema: {num: Number},
-  isPublic: true,
+  open: true,
   async run({num}) {
     if (Meteor.isServer) {
       await wait(200)
@@ -84,7 +84,7 @@ export const testAsync = createMethod({
 export const asyncMethod = createMethod({
   name: 'asyncMethod',
   schema: {num: Number},
-  isPublic: true,
+  open: true,
   async run({ num }) {
     return new Promise(resolve => {
       setTimeout(() => {
@@ -100,7 +100,7 @@ export const asyncMethod = createMethod({
 export const errorMethod = createMethod({
   name: 'errorMethod',
   schema: Any,
-  isPublic: true,
+  open: true,
   run() {
     throw new Error('test error');
   }
@@ -109,7 +109,7 @@ export const errorMethod = createMethod({
 export const methodUnblock = createMethod({
   name: 'methodUnblock',
   schema: Number,
-  isPublic: true,
+  open: true,
   run() {
     this.unblock();
 
@@ -120,19 +120,19 @@ export const methodUnblock = createMethod({
   }
 })
 
-export const schema = Any;
+export const anySchema = Any;
 export function run() { };
 
 export const configMethod = createMethod({
   name: 'a',
-  schema,
+  schema: anySchema,
   run
 });
 
 export const rateLimited = createMethod({
   name: 'rateLimited',
   schema: Any,
-  isPublic: true,
+  open: true,
   rateLimit: {
     interval: 5000,
     limit: 5
@@ -145,7 +145,7 @@ export const rateLimited = createMethod({
 export const wait100 = createMethod({
   name: 'wait100',
   schema: Any,
-  isPublic: true,
+  open: true,
   async run() {
     await wait(100);
     return true;
@@ -155,7 +155,7 @@ export const wait100 = createMethod({
 export const fastMethod = createMethod({
   name: 'fast',
   schema: Any,
-  isPublic: true,
+  open: true,
   async run() {
     return 5;
   }
@@ -178,7 +178,7 @@ const anotherBeforeFunc = (args) => {
 export const beforeMethod = createMethod({
   name: 'beforeMethod',
   schema: Any,
-  isPublic: true,
+  open: true,
   before: beforeFunc,
   async run({ num }) {
     return num * 2;
@@ -188,7 +188,7 @@ export const beforeMethod = createMethod({
 export const beforeArrayMethod = createMethod({
   name: 'beforeArrayMethod',
   schema: Any,
-  isPublic: true,
+  open: true,
   before: [beforeFunc, anotherBeforeFunc],
   async run({ num }) {
     return num * 2;
@@ -208,7 +208,7 @@ const anotherAfterFunc = (result, context) => {
 export const afterMethod = createMethod({
   name: 'afterMethod',
   schema: Any,
-  isPublic: true,
+  open: true,
   async run({ num }) {
     return await num * 3;
   },
@@ -218,7 +218,7 @@ export const afterMethod = createMethod({
 export const afterArrayMethod = createMethod({
   name: 'afterArrayMethod',
   schema: Any,
-  isPublic: true,
+  open: true,
   async run({ num }) {
     return await num * 3;
   },
@@ -228,7 +228,7 @@ export const afterArrayMethod = createMethod({
 export const serverOnly = createMethod({
   name: 'serverOnly',
   schema: Any,
-  isPublic: true,
+  open: true,
   serverOnly: true,
   async run({ num }) {
     return await num * 3;
@@ -239,7 +239,7 @@ export const serverOnly = createMethod({
 export const simplePipeline = createMethod({
   name: 'simplePipeline',
   schema: Number,
-  isPublic: true,
+  open: true,
 }).pipe(
     (n) => n + 5,
     (n) => n - 1,
@@ -249,7 +249,7 @@ export const simplePipeline = createMethod({
 export const asyncPipeline = createMethod({
   name: 'asyncPipeline',
   schema: Number,
-  isPublic: true,
+  open: true,
 }).pipe(
   async (n) => n + 5,
   (n) => Promise.resolve(n - 1),
@@ -259,7 +259,7 @@ export const asyncPipeline = createMethod({
 export const contextMethod = createMethod({
   name: 'context',
   schema: Number,
-  isPublic: true,
+  open: true,
 }).pipe(
   (input, context) => {
     resetEvents();
@@ -282,7 +282,7 @@ export const contextMethod = createMethod({
 export const contextFailedMethod = createMethod({
   name: 'contextFailedMethod',
   schema: Number,
-  isPublic: true,
+  open: true,
 }).pipe(
   (input, context) => {
     resetEvents();
@@ -305,7 +305,7 @@ export const contextFailedMethod = createMethod({
 const globalPipeline = createMethod({
   name: 'globalPipeline',
   schema: Number,
-  isPublic: true,
+  open: true,
   run(input) {
     return input;
   }
@@ -357,7 +357,7 @@ export function resetEvents() {
 export const getEvents = createMethod({
   name: 'getEvents',
   schema: Any,
-  isPublic: true,
+  open: true,
   run() {
     return events;
   }
@@ -374,7 +374,7 @@ export const setOptions = (num) => {
   const addSelected = createMethod({
     name: 'selected.insert',
     schema: Number,
-    isPublic: true,
+    open: true,
     run(num) {
       const selectedId = Selected.insert({
         _id: num.toString(),
@@ -389,7 +389,7 @@ export const setOptions = (num) => {
 export const addSelected = createMethod({
   name: 'addSelected',
   schema: {num: Number},
-  isPublic: true,
+  open: true,
   run({num}) {
     const _id = '123'
     const selectedId = Selected.insert({
@@ -404,7 +404,7 @@ export const addSelected = createMethod({
 export const addSelectedAsync = createMethod({
   name: 'addSelectedAsync',
   schema: {num: Number},
-  isPublic: true,
+  open: true,
   async run({num}) {
     const _id = (num * 2).toString();
 
@@ -420,7 +420,7 @@ export const addSelectedAsync = createMethod({
 export const rollBackAsync = createMethod({
   name: 'rollBackAsync',
   schema: {num: Number},
-  isPublic: true,
+  open: true,
   async run({num}) {
     const _id = (num * 2).toString();
 
@@ -440,7 +440,7 @@ export const rollBackAsync = createMethod({
 export const removeSelected = createMethod({
   name: 'removeSelected',
   schema: String,
-  isPublic: true,
+  open: true,
   async run(id) {
     return Selected.removeAsync({
       _id: id
@@ -451,7 +451,7 @@ export const removeSelected = createMethod({
 export const updateSelected = createMethod({
   name: 'updateSelected',
   schema: { id: String, num: Number },
-  isPublic: true,
+  open: true,
   run({ id, num }) {
     return Selected.update(
       { _id: id },
@@ -488,7 +488,7 @@ async function insertSelected({num, ownerId}) {
 export const addSelectedAsyncWithOwnerPipe = createMethod({
   name: 'addSelectedAsyncWithOwnerPipe',
   schema: {num: Number, ownerId: String},
-  isPublic: true
+  open: true
 }).pipe(
   checkOwnership,
   insertSelected
@@ -497,9 +497,46 @@ export const addSelectedAsyncWithOwnerPipe = createMethod({
 export const addSelectedAsyncWithOwner = createMethod({
   name: 'addSelectedAsyncWithOwner',
   schema: {num: Number, ownerId: String},
-  isPublic: true,
+  open: true,
   async run(args) {
     await checkOwnership(args);
     return await insertSelected(args);
   }
 });
+
+// test jam:easy-schema integration
+export const Todos = new Mongo.Collection('todos');
+
+const todoSchema = {
+  _id: String,
+  text: String
+}
+
+Todos.attachSchema(todoSchema);
+
+const create = async ({ text }) => {
+  return Todos.insertAsync({ text })
+};
+
+const edit = server(async ({ text }) => {
+  return await text;
+});
+
+const num = schema(Number)(async num => {
+  return await num;
+});
+
+const custom = schema({ _id: String, num: Number })(async ({ _id, num }) => {
+  return await { _id, num };
+});
+
+const authRequired = close(async ({ text }) => {
+  return await text;
+});
+
+const openMethod = open(async ({ text }) => {
+  return await text;
+});
+
+Todos.attachMethods({ create, edit, num, custom, authRequired }, {open: true});
+Todos.attachMethods({ openMethod })

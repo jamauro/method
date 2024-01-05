@@ -14,8 +14,7 @@ const config = {
     // up doing validations twice
     throwStubExceptions: true,
   },
-  arePublic: false,
-  basePath: `/imports/api`,
+  open: false,
   loggedOutError: new Meteor.Error('logged-out', 'You must be logged in')
 };
 
@@ -28,42 +27,98 @@ const configure = options => {
       returnStubValue: Match.Maybe(Boolean),
       throwStubExceptions: Match.Maybe(Boolean)
     }),
-    arePublic: Match.Maybe(Boolean),
-    basePath: Match.Maybe(String),
+    open: Match.Maybe(Boolean),
     loggedOutError: Match.Maybe(Match.Where(e => e instanceof Meteor.Error || e instanceof Error))
   });
 
   return Object.assign(config, options);
 };
 
+const hasEasySchema = Package['jam:easy-schema'];
+const check = hasEasySchema ? require('meteor/jam:easy-schema').check : c;
+const shape = hasEasySchema ? require('meteor/jam:easy-schema').shape : undefined;
+const schemaSymbol = Symbol('schema');
+const serverSymbol = Symbol('serverOnly');
+const openSymbol = Symbol('open');
 const restrictedNames = ['insert', 'insertAsync', 'update', 'updateAsync', 'remove', 'removeAsync', 'upsert', 'upsertAsync', 'insertOne', 'insertMany', 'updateOne', 'updateMany', 'deleteOne', 'deleteMany'];
 
-Mongo.Collection.prototype.attachMethods = async function(methods = undefined) {
-  // Attaching methods to the collection
-  // Methods can't have names insert, update, or remove because they'll interfere with the one's that Meteor autogenerates for each Collection. Kind of unfortunate.
-  // We're only attaching methods on the client because that's where they should be called from. Technically they can be called frmo the server but it's considered bad practice so this enforces that they won't be available server side on the Collection. If needed, any server side logic should be pulled out into a function that can be called from other server functions.
-  if (Meteor.isServer) {
+export const schema = schemaValue => fn => {
+  fn[schemaSymbol] = hasEasySchema && schemaValue.constructor === Object ? shape(schemaValue) : schemaValue;
+  return fn;
+};
+
+export function server(fn) {
+  const wrapped = function(...args) {
+    if (Meteor.isServer) {
+      return fn(...args);
+    }
+  };
+
+  Object.getOwnPropertySymbols(fn).map(symbol => wrapped[symbol] = fn[symbol]);
+  wrapped[serverSymbol] = true;
+
+  return wrapped;
+}
+
+export function open(fn) {
+  const wrapped = function(...args) {
+   return fn(...args)
+  };
+
+  Object.getOwnPropertySymbols(fn).map(symbol => wrapped[symbol] = fn[symbol]);
+  wrapped[openSymbol] = true;
+
+  return wrapped;
+}
+
+export function close(fn) {
+  const wrapped = function(...args) {
+    if (!Meteor.userId()) {
+      throw Methods.config.loggedOutError;
+    }
+
+    return fn(...args);
+  };
+
+  Object.getOwnPropertySymbols(fn).map(symbol => wrapped[symbol] = fn[symbol]);
+  wrapped[openSymbol] = false;
+
+  return wrapped;
+}
+
+const clearSymbols = fn => Object.getOwnPropertySymbols(fn).map(symbol => fn[symbol] = undefined);
+
+Mongo.Collection.prototype.attachMethods = function(methods, options = {}) {
+  if (Meteor.isServer) { // We're only attaching methods on the client because that's where they should be called from. Technically they can be called frmo the server but it's considered bad practice so this enforces that they won't be available server side on the Collection. If needed, any server side logic should be pulled out into a function that can be called from other server functions.
     return;
   }
 
-  const methodsToAttach = methods ? methods : await import(`${config.basePath}/${this._name}/methods`);
-  if (!methodsToAttach) {
-    throw new Error('No methods found to attach');
-  }
+  const collection = this;
 
-  const matchedRestrictedNames = Object.keys(methodsToAttach).filter(key => restrictedNames.includes(key));
-  if (matchedRestrictedNames.length) {
-    throw new Error(`Cannot have methods named "${matchedRestrictedNames.join(', ')}" on ${this._name} collection`)
-  }
+  Object.entries(methods).map(([k, v]) => {
+    if (restrictedNames.includes(k)) {
+      throw new Error(`Cannot have method named "${k}" on ${this._name} collection`)
+    }
 
-  for (key in methodsToAttach) {
-    this[key] = methodsToAttach[key]
-  }
+    if (v.name === 'call') {
+      return collection[k] = v;
+    }
 
-  return;
+    const [schema, serverOnly, open] = [v[schemaSymbol], v[serverSymbol], v[openSymbol]];
+    clearSymbols(v);
+
+    const method = createMethod({
+      name: `${collection._name}.${k}`,
+      schema: schema ?? collection.schema,
+      run: v,
+      ...options,
+      ...(serverOnly && { serverOnly }),
+      ...(open && { open })
+    });
+
+    return collection[k] = method;
+  });
 };
-
-const check = Package['jam:easy-schema'] ? require('meteor/jam:easy-schema').check : c;
 
 const getValidator = schema => {
   if (typeof schema.parse === 'function') {
@@ -88,13 +143,13 @@ const getValidator = schema => {
  *   after?: Function|Array<Function>,
  *   run?: Function,
  *   rateLimit?: { limit: number, interval: number },
- *   isPublic?: boolean,
+ *   open?: boolean,
  *   serverOnly?: boolean,
  *   options?: Object
  * }} config - Options for creating the method.
  * @returns {Function | { pipe: Function }} - The method function or an object with a `pipe` method
  */
-export const createMethod = ({ name, schema = undefined, validate: v = undefined, before = [], after = [], run = undefined, rateLimit = undefined, isPublic = undefined, serverOnly = undefined, options = {} }) => {
+export const createMethod = ({ name, schema = undefined, validate: v = undefined, before = [], after = [], run = undefined, rateLimit = undefined, open = undefined, serverOnly = undefined, options = {} }) => {
   if (!name) {
     throw new Error('You must pass in a name when creating a method')
   }
@@ -114,7 +169,7 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
     isFromCallAsync: true // mimic callAsync through isFromCallAsync
   };
 
-  const checkLoggedIn = !(isPublic ?? Methods.config.arePublic);
+  const checkLoggedIn = !(open ?? Methods.config.open);
   const validate = schema ? getValidator(schema) : v;
 
   /**
@@ -129,6 +184,10 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
     const methodInvocation = this;
     let onResult = [];
     let onError = [];
+
+    if (checkLoggedIn && !methodInvocation.userId) {
+      throw Methods.config.loggedOutError;
+    }
 
     /**
      * @type {import('zod').output<S> | T}
@@ -148,10 +207,6 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
     }
 
     async function execute() {
-      if (checkLoggedIn && !methodInvocation.userId) {
-        throw Methods.config.loggedOutError;
-      }
-
       const { before: beforeAll = [], after: afterAll = [] } = Methods.config;
       const beforePipeline = [...(Array.isArray(beforeAll) ? beforeAll : [beforeAll]), ...(Array.isArray(before) ? before : [before])];
       const afterPipeline = [...(Array.isArray(after) ? after : [after]), ...(Array.isArray(afterAll) ? afterAll : [afterAll])];
@@ -231,7 +286,7 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
         // catch exceptions on the stub and re-route them to the promise wrapper
         if (applyOptions.throwStubExceptions) {
           const isThenable = stub && typeof stub.then === 'function';
-          if (isThenable) stub.catch(err => reject(err));
+          if (isThenable) stub.catch(error => reject(error));
         }
       });
     }

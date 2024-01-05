@@ -50,6 +50,8 @@ Currently, these schemas are supported:
 * [zod](https://github.com/colinhacks/zod)
 * [simpl-schema](https://github.com/longshotlabs/simpl-schema)
 
+If you're using `jam:easy-schema`, be sure to check out [Using with jam:easy-schema](#using-with-jam-easy-schema) below for details on a way to write methods with less boilerplate.
+
 Here's a quick example of each one's syntax. They vary in features so pick the one that best fits your needs.
 ```js
 // jam:easy-schema. you'll attach to a Collection so you can reference one {Collection}.schema in your methods
@@ -202,6 +204,7 @@ Todos.attachSchema(schema); // if you're using jam:easy-schema
   Todos.attachMethods(methods);
 })();
 ```
+`attachMethods` accepts the method `options` as an optional second parameter. See [Configuring](#configuring-optional) for a list of the `options`.
 
 With the methods attached you'll use them like this on the client:
 ```js
@@ -215,45 +218,6 @@ async function submit() {
     alert(error)
   }
 }
-```
-
-#### Automatically dynamic import attached methods (optional)
-You can also automatically dynamic import your attached methods to reduce the initial bundle size on the client.
-
-You'll need to add a file to your project, e.g. `/imports/register-dynamic-imports.js` and import this file on both the client and the server near the top of its `mainModule`, e.g. `/client/main.js` and `/server/main.js`. Here's an example of the file:
-
-```js
-// In order for the dynamic import to work properly, Meteor needs to know these paths exist.
-// We do that by declaring them statically inside a if (false) block
-Meteor.startup(async () => {
-  if (false) {
-    await import('/imports/api/todos/schema'); // if using jam:easy-schema and want to dyanmically import it
-    await import('/imports/api/todos/methods');
-    // add additional method paths for your other collections here
-  }
-});
-```
-
-Then instead of using `Todos.attachMethods(methods)`, you'd just use `Todos.attachMethods()`
-```js
-// /imports/api/todos/collection
-// By not passing in the methods explicitly, it will automatically dynamically import the methods and then attach them
-
-import { Mongo } from 'meteor/mongo';
-
-export const Todos = new Mongo.Collection('todos');
-
-Todos.attachSchema(); // assuming you're using jam:easy-schema and dynamically importing it too
-Todos.attachMethods();
-```
-
-This assumes your directory structure is `/imports/api/{collection}/methods`. If you have a different structure, e.g. `/api/todos/methods`, you can configure the base path with:
-```js
-import { Methods } from 'meteor/jam:method';
-
-Methods.configure({
-  basePath: `/api`
-});
 ```
 
 ### Executing code on the server only
@@ -329,13 +293,13 @@ export const create = createMethod({
 ```
 
 ### Changing authentication rules
-By default, all methods will be protected by authentication, meaning they will throw an error if there is *not* a logged-in user. You can change this for an individual method by setting `isPublic: true`. See [Configuring](#configuring-optional) below to change it for all methods.
+By default, all methods will be protected by authentication, meaning they will throw an error if there is *not* a logged-in user. You can change this for an individual method by setting `open: true`. See [Configuring](#configuring-optional) below to change it for all methods.
 
 ```js
 export const create = createMethod({
   name: 'todos.create',
   schema: Todos.schema,
-  isPublic: true,
+  open: true,
   async run({ text }) {
     // ... //
   }
@@ -401,8 +365,7 @@ const config = {
     returnStubValue: true, // make it possible to get the ID of an inserted item on the client before the server finishes
     throwStubExceptions: true,  // don't call the server method if the client stub throws an error, so that we don't end up doing validations twice
   },
-  arePublic: false, // by default all methods will be protected by authentication, override it for all methods by setting this to true
-  basePath: `/imports/api`, // used when dynamically importing methods
+  open: false, // by default all methods will be protected by authentication, override it for all methods by setting this to true
   loggedOutError: new Meteor.Error('logged-out', 'You must be logged in') // customize the logged out error
 };
 ````
@@ -433,8 +396,8 @@ Methods.configure({
 });
 ```
 
-### Helpful utility functions
-Here are some helpful utility functions you might consider adding. They aren't included in this package but you can copy and paste them into your codebase where you see fit.
+### Helpful utility function to log your methods
+Here's a helpful utility function - `log` - that you might consider adding. It isn't included in this package but you can copy and paste it into your codebase where you see fit.
 
 *Logger*
 ```js
@@ -452,23 +415,88 @@ function log(input, pipeline) {
 };
 ```
 
-*Server-only function*
+Then you could use it like this:
 ```js
-// this will ensure that the function passed in will only run on the server
-// could come in handy if have you're using .pipe and some of the functions you want to ensure only run on the server
-function server(fn) {
-  return function(...args) {
-    if (Meteor.isServer) {
-      return fn(...args)
-    }
+import { Methods, server } from 'meteor/jam:method';
+
+Methods.configure({
+  after: server(log)
+});
+```
+
+## Using with `jam:easy-schema`
+`jam:method` integrates with `jam:easy-schema` and offers a way to reduce boilerplate and make your methods even easier to write (though you can still use `createMethod` if you prefer).
+
+`*Note:` This assumes that you're attaching your methods to its collection. See [Attach methods to its Collection](#attach-methods-to-its-collection-optional).
+
+For example, instead of writing this:
+```js
+export const setDone = createMethod({
+  name: 'todos.setDone',
+  schema: Todos.schema,
+  before: checkOwnership,
+  async run({ _id, done }) {
+    return Todos.updateAsync({ _id }, { $set: { done } });
   }
+});
+```
+
+You can write:
+```js
+export const setDone = async ({ _id, done }) => {
+  await checkOwnership({ _id });
+  return Todos.updateAsync({ _id }, { $set: { done } });
 };
 ```
 
-Then you could use them like this:
+The arguments will be automatically checked against the `Todos.schema` and the method will be named `todos.setDone` internally to identify it for app performance monitoring (APM) purposes.
+
+### Customizing methods
+There are a few functions available when you need to customize the method: `schema, server, open, close`. These can be composed if needed.
+
+#### schema
+Most of the time you'll be checking your method against the schema that you attached to its collection, in which case you don't need to specify it, but occasionally you'll need to specify a schema when you have something more custom. You can do that like this:
+
 ```js
-Methods.configure({
-  after: server(log)
+import { schema } from 'meteor/jam:method';
+
+export const doSomething = schema({thing: String, num: Number})(async ({ thing, num }) => {
+  // ... //
+});
+```
+
+#### server
+This will make the method run on the server only.
+
+```js
+import { server } from 'meteor/jam:method';
+
+export const aServerOnlyMethod = server(async data => {
+  // ... //
+});
+```
+
+#### open
+This will make the method publically available so that a logged-in user isn't required.
+
+```js
+import { open } from 'meteor/jam:method';
+
+export const aPublicMethod = open(async data => {
+  // ... //
+});
+```
+
+#### close
+This is the opposite of `open`. It will check for a logged-in user.
+
+`Note`: by default, all methods require a logged-in user so if you stick with that default, then you won't need to use this function. See [Configuring](#configuring-optional).
+
+```js
+import { close } from 'meteor/jam:method';
+
+export const closedMethod = close(async data => {
+  // ... //
 });
 ```
 

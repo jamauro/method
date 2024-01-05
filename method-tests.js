@@ -1,4 +1,3 @@
-// Import Tinytest from the tinytest Meteor package.
 import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
 
@@ -39,7 +38,8 @@ import {
   setOptions,
   checkOwnership,
   addSelectedAsyncWithOwner,
-  addSelectedAsyncWithOwnerPipe
+  addSelectedAsyncWithOwnerPipe,
+  Todos
 } from './test-methods.js';
 
 Tinytest.addAsync('methods - basic', async (test) => {
@@ -249,7 +249,7 @@ Tinytest.addAsync('methods - insertAsync', async (test) => {
 Tinytest.addAsync('methods - global before', async (test) => {
   const result = await globalBefore(5);
   test.equal(result, 6);
-}); */
+});
 
 /*
 // must be run on its own otherwise it screws up other tests
@@ -300,3 +300,81 @@ Tinytest.addAsync('methods - check ownership run', async (test) => {
     console.error(e)
   }
 });
+
+if (Meteor.isClient) {
+  Tinytest.addAsync('attached methods - create', async (test) => {
+    try {
+      const result = await Todos.create({text: 'hi'})
+      test.isTrue(result)
+    } catch(e) {
+      console.error('create', e)
+    }
+  });
+
+  Tinytest.addAsync('attached methods - edit', async (test) => {
+    try {
+      const result = await Todos.edit({text: 'bye'})
+      if (Meteor.isClient) {
+        test.equal(result, undefined)
+      } else {
+        test.equal(result, 'bye')
+      }
+    } catch(e) {
+      console.error(e)
+    }
+  });
+
+  Tinytest.addAsync('attached methods - num', async (test) => {
+    try {
+      const result = await Todos.num(5)
+      test.equal(result, 5);
+    } catch(e) {
+      console.error(e)
+    }
+  });
+
+  Tinytest.addAsync('attached methods - num fail', async (test) => {
+    try {
+      const result = await Todos.num('5')
+    } catch(e) {
+      console.error(e)
+      test.equal(e.details[0].message, 'Expected number, got string')
+    }
+  });
+
+  Tinytest.addAsync('attached methods - custom', async (test) => {
+    try {
+      const result = await Todos.custom({ _id: '1', num: 10 })
+      test.equal(result, {_id: '1', num: 10});
+    } catch(e) {
+      console.error(e)
+    }
+  });
+
+  Tinytest.addAsync('attached methods - custom fail', async (test) => {
+    try {
+      const result = await Todos.custom({ _id: '1', num: '10' })
+    } catch(e) {
+      console.error(e);
+      test.equal(e.details[0].message, 'Num must be a number, not string');
+    }
+  });
+
+  Tinytest.addAsync('attached methods - authRequired', async (test) => {
+    try {
+      const result = await Todos.authRequired({ text: 'hi' })
+    } catch(e) {
+      console.error(e)
+      test.isTrue(e)
+    }
+  });
+
+  Tinytest.addAsync('attached methods - openMethod', async (test) => {
+    try {
+      const result = await Todos.openMethod({ text: 'hi' })
+      test.equal(result, 'hi');
+    } catch(e) {
+      console.error(e)
+    }
+  });
+}
