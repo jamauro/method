@@ -452,7 +452,7 @@ export const setDone = async ({ _id, done }) => {
 The arguments will be automatically checked against the `Todos.schema` and the method will be named `todos.setDone` internally to identify it for app performance monitoring (APM) purposes.
 
 ### Customizing methods
-There are a few functions available when you need to customize the method: `schema, server, open, close`. These can be composed if needed.
+There are a few functions available when you need to customize the method: `schema`, `server`, `open`, `close`. These can be composed if needed.
 
 #### schema
 Most of the time you'll be checking your method against the schema that you attached to its collection, in which case you don't need to specify it, but occasionally you'll need to specify a schema when you have something more custom. You can do that like this:
