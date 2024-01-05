@@ -50,7 +50,7 @@ Currently, these schemas are supported:
 * [zod](https://github.com/colinhacks/zod)
 * [simpl-schema](https://github.com/longshotlabs/simpl-schema)
 
-If you're using `jam:easy-schema`, be sure to check out [Using with jam:easy-schema](#using-with-jam-easy-schema) below for details on a way to write methods with less boilerplate.
+If you're using `jam:easy-schema`, be sure to check out [Using with jam:easy-schema](#using-with-jameasy-schema) below for details on a way to write methods with less boilerplate.
 
 Here's a quick example of each one's syntax. They vary in features so pick the one that best fits your needs.
 ```js
