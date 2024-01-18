@@ -35,91 +35,155 @@ const configure = options => {
 };
 
 const hasEasySchema = Package['jam:easy-schema'];
-const check = hasEasySchema ? require('meteor/jam:easy-schema').check : c;
-const shape = hasEasySchema ? require('meteor/jam:easy-schema').shape : undefined;
+const { check, shape, pick, _getParams } = hasEasySchema ? require('meteor/jam:easy-schema') : { check: c };
 const schemaSymbol = Symbol('schema');
 const serverSymbol = Symbol('serverOnly');
 const openSymbol = Symbol('open');
+const paramsSymbol = Symbol('params');
+const _created = Symbol('_created');
 const restrictedNames = ['insert', 'insertAsync', 'update', 'updateAsync', 'remove', 'removeAsync', 'upsert', 'upsertAsync', 'insertOne', 'insertMany', 'updateOne', 'updateMany', 'deleteOne', 'deleteMany'];
+const noop = () => { };
+const names = [];
+let methodNum = 0;
 
+/**
+ * Creates a higher-order function with an attached schema value.
+ *
+ * @param {any} schemaValue - The schema value to be attached to the function.
+ * @returns {function} - A higher-order function that has the provided schema value attached.
+ */
 export const schema = schemaValue => fn => {
-  fn[schemaSymbol] = hasEasySchema && schemaValue.constructor === Object ? shape(schemaValue) : schemaValue;
+  if (Meteor.isClient && !fn) {
+    fn = noop;
+  }
+  fn[schemaSymbol] = hasEasySchema && schemaValue?.constructor === Object ? shape(schemaValue) : schemaValue;
   return fn;
 };
 
+/**
+ * Wraps a function to make it run on the server only.
+ *
+ * @param {function} fn - The function to be marked as server only.
+ * @returns {function} - The marked function that only executes on the server side. On the client, it returns a noop.
+ */
 export function server(fn) {
-  const wrapped = function(...args) {
-    if (Meteor.isServer) {
-      return fn(...args);
+  if (Meteor.isServer) {
+    fn[serverSymbol] = true;
+    return fn;
+  } else {
+    if (fn) {
+      Object.defineProperty(noop, 'name', { value: fn.name });
+      Object.getOwnPropertySymbols(fn).map(symbol => noop[symbol] = fn[symbol]);
+      noop[paramsSymbol] = _getParams(fn);
     }
-  };
-
-  Object.getOwnPropertySymbols(fn).map(symbol => wrapped[symbol] = fn[symbol]);
-  wrapped[serverSymbol] = true;
-
-  return wrapped;
+    noop[serverSymbol] = true;
+    return noop;
+  }
 }
 
+/**
+ * Wraps a function to make it open - aka NOT require a logged-in user.
+ *
+ * @param {function} fn - The function to be marked as open.
+ * @returns {function} - The marked function.
+ */
 export function open(fn) {
-  const wrapped = function(...args) {
-   return fn(...args)
-  };
-
-  Object.getOwnPropertySymbols(fn).map(symbol => wrapped[symbol] = fn[symbol]);
-  wrapped[openSymbol] = true;
-
-  return wrapped;
+  fn[openSymbol] = true;
+  return fn;
 }
 
+/**
+ * Wraps a function to make it closed - aka require a logged-in user.
+ *
+ * @param {function} fn - The function to be marked as closed.
+ * @returns {function} - The marked function.
+ */
 export function close(fn) {
-  const wrapped = function(...args) {
-    if (!Meteor.userId()) {
-      throw Methods.config.loggedOutError;
-    }
-
-    return fn(...args);
-  };
-
-  Object.getOwnPropertySymbols(fn).map(symbol => wrapped[symbol] = fn[symbol]);
-  wrapped[openSymbol] = false;
-
-  return wrapped;
+  fn[openSymbol] = false;
+  return fn;
 }
 
-const clearSymbols = fn => Object.getOwnPropertySymbols(fn).map(symbol => fn[symbol] = undefined);
+const clearSymbols = fn => Object.getOwnPropertySymbols(fn).forEach(symbol => delete fn[symbol]);
 
-Mongo.Collection.prototype.attachMethods = function(methods, options = {}) {
-  // We're only attaching methods on the client because that's where they should be called from. Technically they can be called frmo the server but it's considered bad practice so this enforces that they won't be available server side on the Collection. If needed, any server side logic should be pulled out into a function that can be called from other server functions.
-  const collection = this;
+const getMetadata = fn => {
+  const metadata = { schema: fn[schemaSymbol], serverOnly: fn[serverSymbol], open: fn[openSymbol], params: fn[paramsSymbol] };
+  clearSymbols(fn);
 
-  Object.entries(methods).map(([k, v]) => {
-    if (restrictedNames.includes(k)) {
-      throw new Error(`Cannot have method named "${k}" on ${this._name} collection`)
-    }
-
-    if (v.name === 'call') {
-      if (Meteor.isServer) return;
-      return collection[k] = v;
-    }
-
-    const [schema, serverOnly, open] = [v[schemaSymbol], v[serverSymbol], v[openSymbol]];
-    clearSymbols(v);
-
-    const method = createMethod({
-      name: `${collection._name}.${k}`,
-      schema: schema ?? collection.schema,
-      run: v,
-      ...options,
-      ...(serverOnly && { serverOnly }),
-      ...(open && { open })
-    });
-
-    if (Meteor.isServer) return;
-    return collection[k] = method;
-  });
+  return metadata;
 };
 
-const getValidator = schema => {
+const generateConfig = fn => {
+  const { schema, serverOnly, open } = getMetadata(fn);
+
+  return {
+    name: fn.name?.length > 1 ? fn.name : schema?.constructor === Object ? `${Object.keys(schema).slice(0, 3).join('_')}-${methodNum + 1}` : `${schema ? schema.name.toLowerCase() : 'method'}-${methodNum + 1}`,
+    schema,
+    run: fn,
+    serverOnly,
+    open
+  };
+};
+
+/**
+ * Attaches methods to a Mongo.Collection prototype.
+ *
+ * @function
+ * @memberof Mongo.Collection.prototype
+ * @name attachMethods
+ * @param {Object.<string, Function>} methods - An object containing method functions to be attached.
+ * @param {{
+ *  before?: Function | Array<Function>;
+ *  after?: Function | Array<Function>;
+ *  rateLimit?: { limit: number, interval: number },
+ *  open?: boolean,
+ *  serverOnly?: boolean,
+ *  options?: Object
+ * }} [options={}] - Additional options for method attachment.
+ */
+Mongo.Collection.prototype.attachMethods = function(methods, options = {}) {
+  // We're only attaching methods on the client because that's where they should be called from. Technically they can be called frmo the server but it's considered bad practice so this enforces that they won't be available server side on the Collection. If needed, any server side logic should be pulled out into a function that can be called from other server functions.
+  try {
+    const collection = this;
+
+    for (const [k, v] of Object.entries(methods)) {
+      if (restrictedNames.includes(k)) {
+        throw new Error(`Cannot have method named "${k}" on ${collection._name} collection`)
+      }
+
+      if (v[_created]) {
+        if (Meteor.isServer) continue;
+        collection[k] = v;
+        continue;
+      }
+
+      const { schema, serverOnly, open, params = _getParams(v) } = getMetadata(v);
+
+      const method = createMethod({
+        name: `${collection._name}.${k}`,
+        schema: schema ?? (hasEasySchema ? pick(collection.schema, params) : undefined),
+        run: v,
+        ...options,
+        ...(serverOnly && { serverOnly }),
+        ...(open ? { open } : {})
+      });
+
+      if (Meteor.isServer) continue;
+      collection[k] = method;
+    };
+
+    return;
+  } catch (error) {
+    console.error(error)
+  }
+};
+
+const setCreated = fn => {
+  fn[_created] = true;
+  setTimeout(() => clearSymbols(fn), 250);
+  return;
+}
+
+const getValidator = (schema, run) => {
   if (typeof schema.parse === 'function') {
     return data => schema.parse(data)
   }
@@ -128,34 +192,44 @@ const getValidator = schema => {
     return data => (schema.validate(data), data)
   }
 
-  return data => (check(data, schema), data);
+  /** @type {import('meteor/check').Match.Pattern} */
+  const schemaToCheck = hasEasySchema && schema.constructor === Object ? (Object.getOwnPropertySymbols(schema)[0] ? (schema['$id'] ? pick(schema, _getParams(run)) : schema) : shape(schema)) : schema;
+  return data => (check(data, schemaToCheck), data);
 };
 
 /**
- * Create a method with specified properties.
- * @template {import('zod').ZodTypeAny} S - The Zod schema type
+ * Create a method with specified properties or given a function.
+ * @template {import('meteor/check').Match.Pattern | import('zod').ZodTypeAny | import('simpl-schema').SimpleSchema} S - The schema type (jam:easy-schema, check, Zod, or simple-schema)
+ * @template T - The return type
  * @param {{
  *   name: string,
- *   schema?: S | Object | any,
+ *   schema?: S,
  *   validate?: Function,
- *   before?: Function|Array<Function>,
- *   after?: Function|Array<Function>,
- *   run?: Function,
+ *   before?: Function | Array<Function>,
+ *   after?: Function | Array<Function>,
+ *   run?: (this: Meteor.MethodThisType, args?: z.output<S> | S) => T,
  *   rateLimit?: { limit: number, interval: number },
  *   open?: boolean,
  *   serverOnly?: boolean,
  *   options?: Object
- * }} config - Options for creating the method.
- * @returns {Function | { pipe: Function }} - The method function or an object with a `pipe` method
+ * } | Function } config - Options for creating the method. Can be a function instead (see functional-style syntax in docs).
+ * @returns {((...args?: (z.input<S> | S)[]) => Promise<T>) | { pipe: (...fns: Function[]) => { ((...args?: (z.input<S> | S)[]) => Promise<T>) } }} - The method function or an object with a `pipe` method
  */
-export const createMethod = ({ name, schema = undefined, validate: v = undefined, before = [], after = [], run = undefined, rateLimit = undefined, open = undefined, serverOnly = undefined, options = {} }) => {
-  if (!name) {
+export const createMethod = config => {
+  const isFn = typeof config === 'function';
+  const { name: n, schema, validate: v, before = [], after = [], run, rateLimit, open, serverOnly, options = {} } = isFn ? generateConfig(config) : config;
+
+  if (!n) {
     throw new Error('You must pass in a name when creating a method')
   }
-  if (!schema && !v || schema && v) {
-    throw new Error(`You must pass in either a schema or a validate function${schema && v ? ', not both,' : ''} for method '${name}'`)
+
+  function checkSetup() {
+    if (!schema && !v || schema && v) {
+      throw new Error(`You must pass in either a schema or a validate function${schema && v ? ', not both,' : ''} for method '${n}'`)
+    }
   }
 
+  let name = n;
   let pipeline = [];
 
   if (typeof run === 'function') {
@@ -169,11 +243,11 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
   };
 
   const checkLoggedIn = !(open ?? Methods.config.open);
-  const validate = schema ? getValidator(schema) : v;
+  const validate = schema ? getValidator(schema, run) : v;
 
   /**
-   * @template T
-   * @param {T} data - The input data to be validated.
+   * @template D
+   * @param {D} data - The input data to be validated.
    */
   const method = async function(data) {
     if (pipeline.length === 0) {
@@ -189,9 +263,9 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
     }
 
     /**
-     * @type {import('zod').output<S> | T}
+     * @type {import('zod').output<Z> | S | D}
      */
-    const validatedData = schema ? validate(data) : (validate(data), data);
+    const validatedData = schema ? validate(data) : validate ? (validate(data), data) : data;
 
     const context = {
       originalInput: validatedData,
@@ -247,16 +321,37 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
     }
   };
 
-  if (serverOnly ?? Methods.config.serverOnly) {
-    if (Meteor.isServer) {
-      Meteor.methods({
-        [name]: method
+  // register the method with Meteor internals
+  if (isFn) methodNum++;
+  if (Meteor.isServer) {
+    if (isFn) {
+      names.push({ id: methodNum, name });
+    }
+
+    Meteor.methods({
+      [name]: method,
+      ...(isFn && !Meteor.server.method_handlers['_getFnName'] && {
+        _getFnName(num) {
+          return names.find(n => n.id === num);
+        }
+      }),
+    });
+  }
+
+  if (Meteor.isClient) {
+    const register = (name, method) => {
+      if (serverOnly ?? Methods.config.serverOnly) return;
+      return Meteor.methods({ [name]: method });
+    };
+
+    if (!isFn) {
+      register(name, method);
+    } else {
+      Meteor.callAsync('_getFnName', methodNum).then(result => {
+        name = result.name;
+        register(name, method);
       });
     }
-  } else {
-    Meteor.methods({
-      [name]: method
-    });
   }
 
   if (rateLimit && Meteor.isServer) {
@@ -271,6 +366,10 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
     }, rateLimit.limit, rateLimit.interval);
   }
 
+  /**
+   * @param {...(z.input<S> | S)[]} args - Arguments for the method
+   * @returns {Promise<T>} - Result of the method
+   */
   function call(...args) {
     if (Meteor.isClient) {
       return new Promise((resolve, reject) => {
@@ -292,13 +391,16 @@ export const createMethod = ({ name, schema = undefined, validate: v = undefined
 
     return Meteor.applyAsync(name, args, applyOptions);
   }
+  setCreated(call);
 
   if (run) {
+    if (run.length !== 0) checkSetup();
     return call;
   }
 
   return {
     pipe(..._pipeline) {
+      if (_pipeline.some(p => p.length !== 0)) checkSetup();
       pipeline = _pipeline
       return call;
     }

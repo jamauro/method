@@ -9,6 +9,18 @@ const Any = Package['jam:easy-schema'] ? require('meteor/jam:easy-schema').Any :
 
 export const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+function log(input, pipeline) {
+  pipeline.onResult((result) => {
+    console.log(`Method ${pipeline.name} finished`, input);
+    console.log('Result', result);
+  });
+
+  pipeline.onError((err) => {
+    console.error(`Method ${pipeline.name} failed`);
+    console.error('Error', err);
+  });
+};
+
 export const defaultAuthed = createMethod({
   name: 'defaultAuthed',
   schema: Any,
@@ -534,9 +546,87 @@ const authRequired = close(async ({ text }) => {
   return await text;
 });
 
-const openMethod = open(async ({ text }) => {
+const unAuthed = open(async ({ text }) => {
   return await text;
 });
 
 Todos.attachMethods({ create, edit, num, custom, authRequired }, {open: true});
-Todos.attachMethods({ openMethod })
+Todos.attachMethods({ unAuthed });
+
+// functional-style syntax
+Methods.configure({
+  open: true,
+  after: server(log)
+})
+
+const aNum = schema(Number)(async num => {
+  return await num;
+});
+
+export const numMethod = createMethod(aNum);
+export const numMethod2 = createMethod(schema(Number)(async num => {
+  return await num;
+}));
+
+const edit2 = async ({ text }) => await text;
+const edit3 = server(async ({ text }) => await text);
+const edit4 = async ({ text }) => await text;
+export const editMethod = createMethod(schema({text: String})(edit2));
+export const editMethod2 = createMethod(schema({text: String})(edit3));
+export const editMethod3 = createMethod(server(schema({text: String})(edit4)));
+export const editMethod4 = createMethod(server(schema({text: String})(async ({ text }) => {
+  return await text;
+})));
+
+export const closedMethod = createMethod(schema({text: String})(authRequired));
+
+const authRequired2 = async ({ text }) => await text;
+export const closedMethod2 = createMethod(server(close(schema({text: String})(authRequired2))));
+export const closedMethod3 = createMethod(server(close(schema({text: String})(async ({ text }) => {
+  return await text;
+}))));
+
+export const openMethod = createMethod(schema({text: String})(unAuthed));
+export const openMethod2 = createMethod(server(schema({text: String})(unAuthed)));
+const unAuthed2 = async ({ text }) => await text;
+export const openMethod3 = createMethod(server(open(schema({text: String})(unAuthed2))));
+
+const schemaless = () => 'hello';
+const schemaed = str => 'yo';
+export const schemalessMethod = createMethod(schemaless)
+export const schemalessMethod2 = createMethod({
+  name: 'schemalessMethod2',
+  run: schemaless
+})
+export const schemalessMethod3 = createMethod({
+  name: 'schemalessMethod3'
+}).pipe(schemaless)
+
+export const schemaedMethod = () => {
+  try {
+    createMethod(schemaed)
+  } catch(e) {
+    throw e
+  }
+};
+
+export const schemaedMethod2 = () => {
+  try {
+    createMethod({
+      name: 'schemaedMethod2',
+      run: schemaed
+    })
+  } catch(e) {
+    throw e
+  }
+};
+
+export const schemaedMethod3 = () => {
+  try {
+    createMethod({
+      name: 'schemaedMethod3'
+    }).pipe(schemaless, schemaed)
+  } catch(e) {
+    throw e
+  }
+};

@@ -399,7 +399,6 @@ Methods.configure({
 ### Helpful utility function to log your methods
 Here's a helpful utility function - `log` - that you might consider adding. It isn't included in this package but you can copy and paste it into your codebase where you see fit.
 
-*Logger*
 ```js
 // log will simply console.log or console.error when the Method finishes
 function log(input, pipeline) {
@@ -424,10 +423,69 @@ Methods.configure({
 });
 ```
 
+## Alternative functional-style syntax
+You can use a functional-style syntax to compose your methods if you prefer. Here's an example.
+
+```js
+const fetchGifs = async({ searchTerm, limit }) => {...}
+
+export const getGifs = createMethod(server(schema({ searchTerm: String, limit: Number })(fetchGifs)))
+```
+`getGifs` is callable from the client but will only run on the server. Internally it will be identified as `fetchGifs`
+
+**`Note`**: if you pass in a named function into `createMethod`, then that will be used to identify the method internally. Otherwise if you pass in an anonymous function, `jam:method` generates a unique name based on its schema to identify it internally.
+
+### Customizing methods when using functional-style syntax
+There are a few functions available when you need to customize the method: `schema`, `server`, `open`, `close`. These can be composed when needed.
+
+#### schema
+Specify the schema to validate against.
+
+```js
+import { schema } from 'meteor/jam:method';
+
+export const doSomething = schema({thing: String, num: Number})(async ({ thing, num }) => {
+  // ... //
+});
+```
+
+#### server
+Make the method run on the server only.
+
+```js
+import { server } from 'meteor/jam:method';
+
+export const aServerOnlyMethod = server(async data => {
+  // ... //
+});
+```
+
+#### open
+Make the method publically available so that a logged-in user isn't required.
+
+```js
+import { open } from 'meteor/jam:method';
+
+export const aPublicMethod = open(async data => {
+  // ... //
+});
+```
+
+#### close
+Make the method check for a logged-in user.
+
+**`Note`**: by default, all methods require a logged-in user so if you stick with that default, then you won't need to use this function. See [Configuring](#configuring-optional).
+
+```js
+import { close } from 'meteor/jam:method';
+
+export const closedMethod = close(async data => {
+  // ... //
+});
+```
+
 ## Using with `jam:easy-schema`
 `jam:method` integrates with `jam:easy-schema` and offers a way to reduce boilerplate and make your methods even easier to write (though you can still use `createMethod` if you prefer).
-
-**`Note`**: This assumes that you're attaching your methods to its collection. See [Attach methods to its Collection](#attach-methods-to-its-collection-optional).
 
 For example, instead of writing this:
 ```js
@@ -449,56 +507,18 @@ export const setDone = async ({ _id, done }) => {
 };
 ```
 
-The arguments will be automatically checked against the `Todos.schema` and the method will be named `todos.setDone` internally to identify it for app performance monitoring (APM) purposes.
+**`Note`**: This assumes that you're attaching your methods to its collection. See [Attach methods to its Collection](#attach-methods-to-its-collection-optional).
 
-### Customizing methods
-There are a few functions available when you need to customize the method: `schema`, `server`, `open`, `close`. These can be composed if needed.
+When you call `Todos.setDone` from the client, the arguments will be automatically checked against the `Todos.schema`. The method will automatically be named `todos.setDone` internally to identify it for app performance monitoring (APM) purposes.
 
-#### schema
-Most of the time you'll be checking your method against the schema that you attached to its collection, in which case you don't need to specify it, but occasionally you'll need to specify a schema when you have something more custom. You can do that like this:
-
+You can also compose with the functions available in the [function-style syntax](#alternative-functional-style-syntax). For example:
 ```js
-import { schema } from 'meteor/jam:method';
-
-export const doSomething = schema({thing: String, num: Number})(async ({ thing, num }) => {
-  // ... //
+export const setDone = server(async ({ _id, done }) => {
+  await checkOwnership({ _id });
+  return Todos.updateAsync({ _id }, { $set: { done } });
 });
 ```
-
-#### server
-This will make the method run on the server only.
-
-```js
-import { server } from 'meteor/jam:method';
-
-export const aServerOnlyMethod = server(async data => {
-  // ... //
-});
-```
-
-#### open
-This will make the method publically available so that a logged-in user isn't required.
-
-```js
-import { open } from 'meteor/jam:method';
-
-export const aPublicMethod = open(async data => {
-  // ... //
-});
-```
-
-#### close
-This is the opposite of `open`. It will check for a logged-in user.
-
-**`Note`**: by default, all methods require a logged-in user so if you stick with that default, then you won't need to use this function. See [Configuring](#configuring-optional).
-
-```js
-import { close } from 'meteor/jam:method';
-
-export const closedMethod = close(async data => {
-  // ... //
-});
-```
+Now when you call `Todos.setDone` from the client it will only run on the server.
 
 ## Coming from `Validated Method`?
 You may be familiar with `mixins` and wondering where they are. With the features of this package - authenticated by default, `before` / `after` hooks, `.pipe` - your mixin code may no longer be needed or can be simplified. If you have another use case where your mixin doesn't translate, I'd love to hear it. Open a new discussion and let's chat.

@@ -39,6 +39,24 @@ import {
   checkOwnership,
   addSelectedAsyncWithOwner,
   addSelectedAsyncWithOwnerPipe,
+  numMethod,
+  numMethod2,
+  editMethod,
+  editMethod2,
+  editMethod3,
+  editMethod4,
+  closedMethod,
+  closedMethod2,
+  closedMethod3,
+  openMethod,
+  openMethod2,
+  openMethod3,
+  schemalessMethod,
+  schemalessMethod2,
+  schemalessMethod3,
+  schemaedMethod,
+  schemaedMethod2,
+  schemaedMethod3,
   Todos
 } from './test-methods.js';
 
@@ -371,10 +389,205 @@ if (Meteor.isClient) {
 
   Tinytest.addAsync('attached methods - openMethod', async (test) => {
     try {
-      const result = await Todos.openMethod({ text: 'hi' })
+      const result = await Todos.unAuthed({ text: 'hi' })
       test.equal(result, 'hi');
     } catch(e) {
       console.error(e)
     }
   });
 }
+
+/* test fn.name manually via console log
+Tinytest.addAsync('functional syntax - names', async (test) => {
+  await numMethod(1).catch(e => console.error(e)) // fn.name number-1
+  await numMethod2(2).catch(e => console.error(e)) // fn.name number-2
+  await editMethod({text: 'hi'}).catch(e => console.error(e)), // fn.name edit2
+  await editMethod2({text: 'hi'}).catch(e => console.error(e)), // fn.name text-4, serverOnly
+  await editMethod3({text: 'hi'}).catch(e => console.error(e)), // fn.name edit4, serverOnly
+  await editMethod4({text: 'hi'}).catch(e => console.error(e)), // fn.name text-6, serverOnly
+  await closedMethod({text: 'hi'}).catch(e => console.error(e)), // fn.name text-7
+  await closedMethod2({text: 'hi'}).catch(e => console.error(e)), // fn.name authRequired2, serverOnly
+  await closedMethod3({text: 'hi'}).catch(e => console.error(e)), // fn.name text-9, serverOnly
+  await openMethod({text: 'hi'}).catch(e => console.error(e)), // fn.name text-10
+  await openMethod2({text: 'hi'}).catch(e => console.error(e)), // fn.name text-11, serverOnly
+  await openMethod3({text: 'hi'}).catch(e => console.error(e)) // fn.name unAuthed2, serverOnly
+});
+*/
+
+
+Tinytest.addAsync('functional syntax - numMethod', async (test) => {
+  try {
+    const result = await numMethod(1);
+    test.equal(result, 1)
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - numMethod2', async (test) => {
+  try {
+    const result = await numMethod2(2);
+    test.equal(result, 2)
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - editMethod', async (test) => {
+  try {
+    const result = await editMethod({text: 'hi'})
+    test.equal(result, 'hi')
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - editMethod2', async (test) => {
+  try {
+    const result = await editMethod2({text: 'hi'})
+    if (Meteor.isClient) {
+      test.equal(result, undefined)
+    } else {
+      test.equal(result, 'hi')
+    }
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - editMethod3', async (test) => {
+  try {
+    const result = await editMethod3({text: 'hi'})
+    if (Meteor.isClient) {
+      test.equal(result, undefined)
+    } else {
+      test.equal(result, 'hi')
+    }
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - editMethod4', async (test) => {
+  try {
+    const result = await editMethod4({text: 'hi'})
+    if (Meteor.isClient) {
+      test.equal(result, undefined)
+    } else {
+      test.equal(result, 'hi')
+    }
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - closedMethod', async (test) => {
+  try {
+    const result = await closedMethod({text: 'hi'})
+    test.equal(result, 'hi')
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+
+Tinytest.addAsync('functional syntax - closedMethod2', async (test) => {
+  try {
+    const result = await closedMethod2({text: 'hi'})
+    if (Meteor.isClient) {
+      test.equal(result, undefined)
+    } else {
+      test.equal(result, 'hi')
+    }
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - closedMethod3', async (test) => {
+  try {
+    const result = await closedMethod3({text: 'hi'})
+    if (Meteor.isClient) {
+      test.equal(result, undefined)
+    } else {
+      test.equal(result, 'hi')
+    }
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - openMethod', async (test) => {
+  try {
+    const result = await openMethod({text: 'hi'})
+    test.equal(result, 'hi')
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - openMethod2', async (test) => {
+  try {
+    const result = await openMethod2({text: 'hi'})
+    if (Meteor.isClient) {
+      test.equal(result, undefined)
+    } else {
+      test.equal(result, 'hi')
+    }
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('functional syntax - openMethod3', async (test) => {
+  try {
+    const result = await openMethod3({text: 'hi'})
+    if (Meteor.isClient) {
+      test.equal(result, undefined)
+    } else {
+      test.equal(result, 'hi')
+    }
+  } catch(e) {
+    console.error(e)
+  }
+});
+
+Tinytest.addAsync('schemaless - functional syntax', async (test) => {
+  const result = await schemalessMethod();
+  test.equal(result, 'hello')
+});
+
+Tinytest.addAsync('schemaless - regular syntax', async (test) => {
+  const result = await schemalessMethod2();
+  test.equal(result, 'hello')
+});
+
+Tinytest.addAsync('schemaless - pipe syntax', async (test) => {
+  const result = await schemalessMethod3();
+  test.equal(result, 'hello')
+});
+
+Tinytest.addAsync('schemaed - functional syntax', async (test) => {
+  try {
+    const result = await schemaedMethod();
+  } catch(e) {
+    test.equal(e.message, "You must pass in either a schema or a validate function for method 'schemaed'")
+  }
+});
+
+Tinytest.addAsync('schemaed - regular syntax', async (test) => {
+  try {
+    const result = await schemaedMethod2();
+  } catch(e) {
+    test.equal(e.message, "You must pass in either a schema or a validate function for method 'schemaedMethod2'")
+  }
+});
+
+Tinytest.addAsync('schemaed - pipe syntax', async (test) => {
+  try {
+    const result = await schemaedMethod3();
+  } catch(e) {
+    test.equal(e.message, "You must pass in either a schema or a validate function for method 'schemaedMethod3'")
+  }
+});
+
