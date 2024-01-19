@@ -213,7 +213,7 @@ const getValidator = (schema, run) => {
  *   serverOnly?: boolean,
  *   options?: Object
  * } | Function } config - Options for creating the method. Can be a function instead (see functional-style syntax in docs).
- * @returns {((...args?: (z.input<S> | S)[]) => Promise<T>) | { pipe: (...fns: Function[]) => { ((...args?: (z.input<S> | S)[]) => Promise<T>) } }} - The method function or an object with a `pipe` method
+ * @returns {(...args?: (z.input<S> | S)[]) => Promise<T> | { pipe: (...fns: Function[]) => (...args?: (z.input<S> | S)[]) => Promise<T> }} - The method function or an object with a `pipe` method
  */
 export const createMethod = config => {
   const isFn = typeof config === 'function';

@@ -16,7 +16,7 @@ export declare const createMethod: <S extends Match.Pattern | ZodTypeAny | Simpl
     serverOnly?: boolean,
     options?: Object
   } | Function
-) => ((...args?: (z.input<S> | S)[]) => Promise<T>) | { pipe: (...fns: Function[]) => { ((...args?: (z.input<S> | S)[]) => Promise<T>) };
+) => ((...args?: (z.input<S> | S)[]) => Promise<T> | { pipe: (...fns: Function[]) => (...args?: (z.input<S> | S)[]) => Promise<T> });
 
 type Methods = {
   config: {
@@ -42,19 +42,19 @@ type Methods = {
     loggedOutError?: Error | Meteor.Error;
   }) => any;
   create: <S extends Match.Pattern | ZodTypeAny | SimpleSchema, T>(
-  config: {
-    name: string,
-    schema?: S,
-    validate?: Function,
-    before?: Function | Array<Function>,
-    after?: Function | Array<Function>,
-    run?: (this: Meteor.MethodThisType, args?: z.output<S> | S) => T,
-    rateLimit?: { limit: number, interval: number },
-    open?: boolean,
-    serverOnly?: boolean,
-    options?: Object
-  } | Function
-) => ((...args?: (z.input<S> | S)[]) => Promise<T>) | { pipe: (...fns: Function[]) => { ((...args?: (z.input<S> | S)[]) => Promise<T>) };
+    config: {
+      name: string,
+      schema?: S,
+      validate?: Function,
+      before?: Function | Array<Function>,
+      after?: Function | Array<Function>,
+      run?: (this: Meteor.MethodThisType, args?: z.output<S> | S) => T,
+      rateLimit?: { limit: number, interval: number },
+      open?: boolean,
+      serverOnly?: boolean,
+      options?: Object
+    } | Function
+  ) => ((...args?: (z.input<S> | S)[]) => Promise<T> | { pipe: (...fns: Function[]) => (...args?: (z.input<S> | S)[]) => Promise<T> })
 };
 
 export declare const Methods: Methods;

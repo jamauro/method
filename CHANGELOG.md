@@ -1,3 +1,6 @@
+## 1.4.1
+* fix: typescript only issue with .d.ts file
+
 ## 1.4.0
 * feat: better typescript and code completion support via declaration file (.d.ts)
 * feat: functional-style method syntax
