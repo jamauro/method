@@ -1,3 +1,6 @@
+## 1.4.2-beta.0
+* fix: improve typescript declarations for better code completion
+
 ## 1.4.1
 * fix: typescript only issue with .d.ts file
 
