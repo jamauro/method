@@ -65,7 +65,9 @@ const schema = new SimpleSchema({text: String, isPrivate: {type: Boolean, option
 ```
 
 #### Custom validate function
-If you're not using one of the supported schemas, you can use `validate` to pass in a custom validation function:
+If you're not using one of the supported schemas, you can use `validate` to pass in a custom validation function.
+**`Note`**: `validate` can be an async function if needed.
+
 ```js
 // import your schema from somewhere
 // import your validator function from somewhere

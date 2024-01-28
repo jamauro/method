@@ -1,4 +1,5 @@
-## 1.4.2-beta.0
+## 1.4.2
+* fix: allow custom validate function to be async
 * fix: improve typescript declarations for better code completion
 
 ## 1.4.1

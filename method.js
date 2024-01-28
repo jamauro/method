@@ -265,7 +265,7 @@ export const createMethod = config => {
     /**
      * @type {import('zod').output<Z> | S | D}
      */
-    const validatedData = schema ? validate(data) : validate ? (validate(data), data) : data;
+    const validatedData = schema ? validate(data) : validate ? (await validate(data), data) : data;
 
     const context = {
       originalInput: validatedData,

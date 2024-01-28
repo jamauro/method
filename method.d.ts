@@ -43,8 +43,8 @@ export declare const createMethod: {
     config: {
       name: string,
       schema?: S,
-      rateLimit?: { interval: number; limit: number },
       validate?: Function,
+      rateLimit?: { interval: number; limit: number },
       before?: Function | Array<Function>,
       after?: Function | Array<Function>,
       open?: boolean,
@@ -57,9 +57,8 @@ export declare const createMethod: {
   <S extends z.ZodTypeAny>(
     config: {
       name: string,
-      schema?: S,
+      schema: S,
       rateLimit?: { interval: number; limit: number },
-      validate?: Function,
       before?: Function | Array<Function>,
       after?: Function | Array<Function>,
       open?: boolean,
@@ -72,8 +71,8 @@ export declare const createMethod: {
     config: {
       name: string,
       schema?: S,
-      rateLimit?: { interval: number; limit: number },
       validate?: Function,
+      rateLimit?: { interval: number; limit: number },
       before?: Function | Array<Function>,
       after?: Function | Array<Function>,
       open?: boolean,

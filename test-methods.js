@@ -71,6 +71,32 @@ export const customValidate = createMethod({
   }
 });
 
+export const customValidateAsync = createMethod({
+  name: 'customValidateAsync',
+  open: true,
+  validate: async function(args) {
+    check(args, {num: Number})
+
+    const promise = new Promise((resolve, reject) => {
+      if (args.num === 5) {
+        reject('fail')
+      } else {
+        resolve('success')
+      }
+    })
+
+    const result = await promise;
+    if (result === 'fail') {
+      throw 'fail'
+    } else {
+      return args
+    }
+  },
+  run({num}) {
+    return num;
+  }
+});
+
 export const test1 = createMethod({
   name: 'test1',
   schema: Any,

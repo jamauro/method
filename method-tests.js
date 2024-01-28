@@ -9,6 +9,7 @@ import {
   zodSchema,
   simpleSchema,
   customValidate,
+  customValidateAsync,
   test1,
   testAsync,
   asyncMethod,
@@ -104,6 +105,20 @@ Tinytest.addAsync('methods - SimpleSchema', async (test) => {
 Tinytest.addAsync('methods - custom validate', async (test) => {
   const result = await customValidate({ num: 20 });
   test.equal(result, 20);
+});
+
+Tinytest.addAsync('methods - custom validate async', async (test) => {
+  const result = await customValidateAsync({ num: 20 });
+  test.equal(result, 20);
+});
+
+Tinytest.addAsync('methods - custom validate async fail', async (test) => {
+  try {
+    const result = await customValidateAsync({ num: 5 });
+    test.equal('should never be reached', true);
+  } catch(error) {
+    test.equal(error, 'fail')
+  }
 });
 
 if (Meteor.isClient) {
