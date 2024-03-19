@@ -1,6 +1,6 @@
 Package.describe({
   name: 'jam:method',
-  version: '1.4.2',
+  version: '1.5.0',
   summary: 'An easy way to create Meteor methods',
   git: 'https://github.com/jamauro/method',
   documentation: 'README.md'
@@ -25,5 +25,5 @@ Package.onTest(function(api) {
   api.use('jam:easy-schema');
   api.use('jam:method');
   api.addFiles('test-methods.js');
-  api.mainModule('method-tests.js');
+  api.mainModule('tests.js');
 });

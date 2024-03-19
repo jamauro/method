@@ -1,3 +1,7 @@
+## 1.5.0
+* feat: `.validate` - validate without executing the method
+* feat: `.validate.only` - validate only a subset without executing the method
+
 ## 1.4.2
 * fix: allow custom validate function to be async
 * fix: improve typescript declarations for better code completion

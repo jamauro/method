@@ -23,7 +23,32 @@ export interface CreateMethodPipeline<I, This = Meteor.MethodThisType> {
   <R1, R2, R3, R4, R5, R6, R7, R8>(fn1: (this: This, input: I, context: PipelineContext<I>) => R1, fn2: (this: This, input: Awaited<R1>, context: PipelineContext<I>) => R2, fn3: (this: This, input: Awaited<R2>, context: PipelineContext<I>) => R3, fn4: (this: This, input: Awaited<R3>, context: PipelineContext<I>) => R4, fn5: (this: This, input: Awaited<R4>, context: PipelineContext<I>) => R5, fn6: (this: This, input: Awaited<R5>, context: PipelineContext<I>) => R6, fn7: (this: This, input: Awaited<R1>, context: PipelineContext<I>) => R7, fn8: (this: This, input: Awaited<R7>, context: PipelineContext<I>) => R8): (...args: I extends undefined ? [] : [I]) => Promise<R8>;
 }
 
+export declare function validate<D, Z extends z.ZodTypeAny>(data: D): z.output<Z> | D;
+
+/**
+ * Create a method with specified properties or given a function.
+ * @template {import('meteor/check').Match.Pattern | import('zod').ZodTypeAny | import('simpl-schema').SimpleSchema} S - The schema type (jam:easy-schema, check, Zod, or simple-schema)
+ * @template T - The return type
+ * @param {{
+ *   name: string,
+ *   schema?: S,
+ *   validate?: Function,
+ *   before?: Function | Array<Function>,
+ *   after?: Function | Array<Function>,
+ *   run?: (this: Meteor.MethodThisType, args?: z.output<S> | S) => T,
+ *   rateLimit?: { limit: number, interval: number },
+ *   open?: boolean,
+ *   serverOnly?: boolean,
+ *   options?: Object
+ * } | Function } config - Options for creating the method. Can be a function instead (see functional-style syntax in docs).
+ * @returns {(...args?: (z.input<S> | S)[]) => Promise<T> | { pipe: (...fns: Function[]) => (...args?: (z.input<S> | S)[]) => Promise<T> }} - The method function or an object with a `pipe` method
+ */
 export declare const createMethod: {
+  validate: typeof validate;
+  validate: {
+    only: typeof validate;
+  };
+
   <S extends z.ZodTypeAny, T>(
     config: {
       name: string,

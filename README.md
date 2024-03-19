@@ -10,7 +10,7 @@ Method is an easy way to create Meteor `methods` with Optimistic UI. It's built 
 * Optionally run a method on the server only
 * Attach the methods to Collections (optional)
 * Validate with one of the supported schema packages or a custom validate function
-* No need to use `.call` to invoke the method as with `Validated Methods`
+* No need to use `.call` to invoke the method as with `Validated Method`
 
 ## Usage
 
@@ -324,6 +324,27 @@ export const create = createMethod({
   }
 });
 ```
+
+### Validate without executing the method
+There may be occassions where you want to validate without executing the method. In these cases, you can use `.validate`. If you want to validate against only part of the schema, use `.validate.only`.
+
+```js
+export const create = createMethod({
+  name: 'todos.create',
+  schema: Todos.schema,
+  async run({ text }) {
+    // ... //
+  }
+});
+
+// validate against the schema without executing the method
+create.validate({...})
+
+// validate against only the relevant part of the schema based on the data passed in without executing the method
+create.validate.only({...})
+```
+
+If you're using a custom validate function instead of one of the supported schemas and you'd like to use `.validate.only`, you can simply append an `only` function onto the `validate` function that you supply.
 
 ### Options for Meteor.applyAsync
 When called, the method uses [Meteor.applyAsync](https://docs.meteor.com/api/methods#Meteor-applyAsync) under the hood to execute your `run` function or `.pipe` function(s). `Meteor.applyAsync` takes a few options which can be used to alter the way Meteor handles the method. If you want to change the defaults or include other supported options, pass in `options` when creating the method.

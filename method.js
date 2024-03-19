@@ -35,7 +35,7 @@ const configure = options => {
 };
 
 const hasEasySchema = Package['jam:easy-schema'];
-const { check, shape, pick, _getParams } = hasEasySchema ? require('meteor/jam:easy-schema') : { check: c };
+const { check, shape, pick, _getParams } = hasEasySchema ? require('meteor/jam:easy-schema') : { check: c, pick: require('./utils.js').pick }
 const schemaSymbol = Symbol('schema');
 const serverSymbol = Symbol('serverOnly');
 const openSymbol = Symbol('open');
@@ -181,20 +181,28 @@ const setCreated = fn => {
   fn[_created] = true;
   setTimeout(() => clearSymbols(fn), 250);
   return;
-}
+};
 
 const getValidator = (schema, run) => {
+  let validate;
+
   if (typeof schema.parse === 'function') {
-    return data => schema.parse(data)
+    validate = data => schema.parse(data)
+    validate.only = data => schema.partial().parse(data);
+    return validate;
   }
 
   if (typeof schema.validate === 'function') {
-    return data => (schema.validate(data), data)
+    validate = data => (schema.validate(data), data);
+    validate.only = data => (schema.pick(Object.keys(data).join(', ')).validate(data), data);
+    return validate;
   }
 
   /** @type {import('meteor/check').Match.Pattern} */
   const schemaToCheck = hasEasySchema && schema.constructor === Object ? (Object.getOwnPropertySymbols(schema)[0] ? (schema['$id'] ? pick(schema, _getParams(run)) : schema) : shape(schema)) : schema;
-  return data => (check(data, schemaToCheck), data);
+  validate = data => (check(data, schemaToCheck), data);
+  validate.only = data => (check(data, pick(schema, Object.keys(data))), data)
+  return validate;
 };
 
 /**
@@ -391,6 +399,23 @@ export const createMethod = config => {
 
     return Meteor.applyAsync(name, args, applyOptions);
   }
+
+  /**
+   * Validate without executing the method.
+   * @template D
+   * @param {D} data - The input data to be validated.
+   * @returns {import('zod').output<Z> | D}
+   */
+  call.validate = data => validate(data);
+
+  /**
+   * Validate only a subset without executing the method.
+   * @template D
+   * @param {D} data - The input data to be validated.
+   * @returns {import('zod').output<Z> | D}
+   */
+  call.validate.only = data => validate.only(data);
+
   setCreated(call);
 
   if (run) {

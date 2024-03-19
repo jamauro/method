@@ -31,7 +31,7 @@ export const defaultAuthed = createMethod({
 
 export const checkSchema = createMethod({
   name: 'checkSchema',
-  schema: {num: Number, isPrivate: Match.Maybe(Boolean)},
+  schema: {num: Number, isPrivate: Boolean},
   open: true,
   async run({ num, isPrivate }) {
     if (isPrivate) {
@@ -44,7 +44,7 @@ export const checkSchema = createMethod({
 
 export const zodSchema = createMethod({
   name: 'zodSchema',
-  schema: z.object({num: z.number()}),
+  schema: z.object({num: z.number(), isPrivate: z.boolean()}),
   open: true,
   async run({ num }) {
     return num * 10
@@ -53,7 +53,7 @@ export const zodSchema = createMethod({
 
 export const simpleSchema = createMethod({
   name: 'simpleSchema',
-  schema: new SimpleSchema({num: Number}),
+  schema: new SimpleSchema({num: Number, isPrivate: Boolean}),
   open: true,
   async run({ num }) {
     return num * 20
@@ -64,7 +64,7 @@ export const customValidate = createMethod({
   name: 'customValidate',
   open: true,
   validate(args) {
-    check(args, {num: Number})
+    check(args, {num: Number, isPrivate: Match.Maybe(Boolean)})
   },
   run({num}) {
     return num;
@@ -75,7 +75,7 @@ export const customValidateAsync = createMethod({
   name: 'customValidateAsync',
   open: true,
   validate: async function(args) {
-    check(args, {num: Number})
+    check(args, {num: Number, isPrivate: Match.Maybe(Boolean)})
 
     const promise = new Promise((resolve, reject) => {
       if (args.num === 5) {

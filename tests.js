@@ -87,18 +87,13 @@ Tinytest.addAsync('methods - check schema', async (test) => {
   test.equal(result, 50);
 });
 
-Tinytest.addAsync('methods - check schema optional', async (test) => {
-  const result = await checkSchema({ num: 25 });
-  test.equal(result, 25);
-});
-
 Tinytest.addAsync('methods - zod schema', async (test) => {
-  const result = await zodSchema({ num: 4 });
+  const result = await zodSchema({ num: 4, isPrivate: true });
   test.equal(result, 40);
 });
 
 Tinytest.addAsync('methods - SimpleSchema', async (test) => {
-  const result = await simpleSchema({ num: 5 });
+  const result = await simpleSchema({ num: 5, isPrivate: true });
   test.equal(result, 100);
 });
 
@@ -116,8 +111,137 @@ Tinytest.addAsync('methods - custom validate async fail', async (test) => {
   try {
     const result = await customValidateAsync({ num: 5 });
     test.equal('should never be reached', true);
-  } catch(error) {
+  } catch (error) {
     test.equal(error, 'fail')
+  }
+});
+
+Tinytest.addAsync('.validate - check schema', async (test) => {
+  try {
+    const result = checkSchema.validate({ num: 25, isPrivate: true });
+  } catch (error) {
+    test.equal('should not be reached', true)
+  }
+});
+
+Tinytest.addAsync('.validate - check schema fail', async (test) => {
+  try {
+    const result = checkSchema.validate({ num: '25', isPrivate: true });
+    test.equal('should not be reached', true)
+  } catch (error) {
+    test.isTrue(error instanceof Error)
+  }
+});
+
+Tinytest.addAsync('.validate - check .only schema', async (test) => {
+  try {
+    const result = checkSchema.validate.only({ isPrivate: true });
+  } catch (error) {
+    test.equal('should not be reached', true)
+  }
+});
+
+Tinytest.addAsync('.validate - check .only schema fail', async (test) => {
+  try {
+    const result = checkSchema.validate.only({ isPrivate: 'true' });
+  } catch (error) {
+    test.isTrue(error instanceof Error)
+  }
+});
+
+Tinytest.addAsync('.validate - zod schema', async (test) => {
+  try {
+    const result = await zodSchema.validate({ num: 4, isPrivate: true });
+  } catch (error) {
+    test.equal('should not be reached', true)
+  }
+});
+
+Tinytest.addAsync('.validate - zod schema fail', async (test) => {
+  try {
+    const result = await zodSchema.validate({ num: '4', isPrivate: true });
+  } catch (error) {
+    test.isTrue(error instanceof Error)
+  }
+});
+
+Tinytest.addAsync('.validate - zod schema .only', async (test) => {
+  try {
+    const result = await zodSchema.validate.only({ isPrivate: true });
+  } catch (error) {
+    test.equal('should not be reached', true)
+  }
+});
+
+Tinytest.addAsync('.validate - zod schema .only fail', async (test) => {
+  try {
+    const result = await zodSchema.validate.only({ isPrivate: 'true' });
+  } catch (error) {
+    test.isTrue(error instanceof Error)
+  }
+});
+
+Tinytest.addAsync('.validate - SimpleSchema', async (test) => {
+  try {
+    const result = await simpleSchema.validate({ num: 5, isPrivate: true });
+  } catch (error) {
+    test.equal('should not be reached', true)
+  }
+});
+
+Tinytest.addAsync('.validate - SimpleSchema fail', async (test) => {
+  try {
+    const result = await simpleSchema.validate({ num: '5', isPrivate: true });
+  } catch (error) {
+    test.isTrue(error instanceof Error)
+  }
+});
+
+Tinytest.addAsync('.validate - SimpleSchema .only', async (test) => {
+  try {
+    const result = await simpleSchema.validate.only({ isPrivate: true });
+  } catch (error) {
+    test.equal('should not be reached', true)
+  }
+});
+
+Tinytest.addAsync('.validate - SimpleSchema .only fail', async (test) => {
+  try {
+    const result = await simpleSchema.validate.only({ isPrivate: 'true' });
+  } catch (error) {
+    test.isTrue(error instanceof Error)
+  }
+});
+
+Tinytest.addAsync('.validate - custom validate', async (test) => {
+  try {
+    const result = await customValidate.validate({ num: 20 });
+  } catch (error) {
+    test.equal('should not be reached', true)
+  }
+});
+
+Tinytest.addAsync('.validate - custom validate fail', async (test) => {
+  try {
+    const result = await customValidate.validate({ num: '20' });
+  } catch (error) {
+    test.isTrue(error instanceof Error)
+  }
+});
+
+Tinytest.addAsync('.validate - custom validate async', async (test) => {
+  try {
+    const result = await customValidateAsync.validate({ num: 20 });
+  } catch (error) {
+    test.equal('should not be reached', true)
+  }
+});
+
+Tinytest.addAsync('.validate - custom validate async fail', async (test) => {
+  try {
+    const result = await customValidateAsync.validate({ num: 20 });
+  } catch (error) {
+    test.isTrue(error instanceof Error)
   }
 });
 
