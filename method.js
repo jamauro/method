@@ -35,7 +35,7 @@ const configure = options => {
 };
 
 const hasEasySchema = Package['jam:easy-schema'];
-const { check, shape, pick, _getParams } = hasEasySchema ? require('meteor/jam:easy-schema') : { check: c, pick: require('./utils.js').pick }
+const { check, shape, pick, _getParams } = hasEasySchema ? require('meteor/jam:easy-schema') : { check: c, pick: require('./utils.js').pick };
 const schemaSymbol = Symbol('schema');
 const serverSymbol = Symbol('serverOnly');
 const openSymbol = Symbol('open');
@@ -185,10 +185,12 @@ const setCreated = fn => {
 
 const getValidator = (schema, run) => {
   let validate;
+  let partialSchema; // this is a deep partial, aka deep optional
 
   if (typeof schema.parse === 'function') {
     validate = data => schema.parse(data)
-    validate.only = data => schema.partial().parse(data);
+    partialSchema = schema.partial();
+    validate.only = data => partialSchema.parse(data);
     return validate;
   }
 
@@ -201,7 +203,9 @@ const getValidator = (schema, run) => {
   /** @type {import('meteor/check').Match.Pattern} */
   const schemaToCheck = hasEasySchema && schema.constructor === Object ? (Object.getOwnPropertySymbols(schema)[0] ? (schema['$id'] ? pick(schema, _getParams(run)) : schema) : shape(schema)) : schema;
   validate = data => (check(data, schemaToCheck), data);
-  validate.only = data => (check(data, pick(schema, Object.keys(data))), data)
+  partialSchema = hasEasySchema && shape(schemaToCheck, {optionalize: true});
+  validate.only = partialSchema ? data => (check(data, partialSchema), data) : data => (check(data, pick(schema, Object.keys(data))), data);
+
   return validate;
 };
 

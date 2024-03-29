@@ -1,3 +1,6 @@
+## 1.5.1
+* fix: optimizations for `.validate.only`
+
 ## 1.5.0
 * feat: `.validate` - validate without executing the method
 * feat: `.validate.only` - validate only a subset without executing the method
