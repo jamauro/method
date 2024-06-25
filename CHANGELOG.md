@@ -1,3 +1,6 @@
+## 1.5.2
+* fix: preserve `methodInvocation` so that can use `this.userId` for example inside a custom `validate` function
+
 ## 1.5.1
 * fix: optimizations for `.validate.only`
 
