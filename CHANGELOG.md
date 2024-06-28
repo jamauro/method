@@ -1,3 +1,6 @@
+## 1.6.0-rc.4
+* feat: Meteor 3.0 compatability with the latest release candidate
+
 ## 1.5.2
 * fix: preserve `methodInvocation` so that can use `this.userId` for example inside a custom `validate` function
 

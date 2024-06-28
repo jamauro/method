@@ -119,6 +119,36 @@ export const testAsync = createMethod({
   }
 });
 
+export const testAsyncErrorClient = createMethod({
+  name: 'testAsyncErrorClient',
+  schema: {num: Number},
+  open: true,
+  async run({num}) {
+    if (Meteor.isClient) {
+      throw new Meteor.Error('client error')
+    }
+    if (Meteor.isServer) {
+      await wait(200)
+    }
+
+    return num * 10;
+  }
+});
+
+export const testAsyncErrorServer = createMethod({
+  name: 'testAsyncErrorServer',
+  schema: {num: Number},
+  open: true,
+  async run({num}) {
+    if (Meteor.isServer) {
+      await wait(200)
+      throw new Meteor.Error('server error')
+    }
+
+    return num * 10;
+  }
+});
+
 export const asyncMethod = createMethod({
   name: 'asyncMethod',
   schema: {num: Number},
@@ -148,13 +178,15 @@ export const methodUnblock = createMethod({
   name: 'methodUnblock',
   schema: Number,
   open: true,
-  run() {
+  run(n) {
     this.unblock();
 
     if (Meteor.isServer) {
       new Promise(resolve => setTimeout(resolve, 500))
-      return 10;
+      return n * 2;
     }
+
+    return n;
   }
 })
 
@@ -185,7 +217,7 @@ export const wait100 = createMethod({
   schema: Any,
   open: true,
   async run() {
-    await wait(100);
+    // await wait(100); can't use setTimeout in 3.x
     return true;
   }
 });
@@ -269,7 +301,7 @@ export const serverOnly = createMethod({
   open: true,
   serverOnly: true,
   async run({ num }) {
-    return await num * 3;
+    return num * 3;
   }
 });
 
@@ -320,7 +352,7 @@ export const contextMethod = createMethod({
 export const contextFailedMethod = createMethod({
   name: 'contextFailedMethod',
   schema: Number,
-  open: true,
+  open: true
 }).pipe(
   (input, context) => {
     resetEvents();
@@ -374,22 +406,23 @@ export const Numbers = new Mongo.Collection('numbers');
 export const Selected = new Mongo.Collection('selected');
 
 if (Meteor.isServer) {
-  Numbers.remove({});
-  Selected.remove({});
+  Numbers.removeAsync({});
+  Selected.removeAsync({});
 
   for(let i = 0; i < 100; i++) {
-    Numbers.insert({ num: i, owner: i });
+    Numbers.insertAsync({ num: i, owner: i });
   }
 }
 
 let events = [];
 
 export function recordEvent(text) {
-  events.push(text);
+  return events.push(text);
 }
 
 export function resetEvents() {
   events = [];
+  return events;
 }
 
 export const getEvents = createMethod({
@@ -413,8 +446,8 @@ export const setOptions = (num) => {
     name: 'selected.insert',
     schema: Number,
     open: true,
-    run(num) {
-      const selectedId = Selected.insert({
+    async run(num) {
+      const selectedId = await Selected.insertAsync({
         _id: num.toString(),
         num
       });
@@ -428,14 +461,12 @@ export const addSelected = createMethod({
   name: 'addSelected',
   schema: {num: Number},
   open: true,
-  run({num}) {
+  async run({num}) {
     const _id = '123'
-    const selectedId = Selected.insert({
+    return Selected.insertAsync({
       _id,
       num
     });
-
-    return selectedId
   }
 });
 
@@ -463,7 +494,7 @@ export const rollBackAsync = createMethod({
     const _id = (num * 2).toString();
 
     if (Meteor.isServer) {
-      throw new Error('server error')
+      throw new Meteor.Error('server error')
     }
 
     const selectedId = await Selected.insertAsync({
@@ -490,8 +521,8 @@ export const updateSelected = createMethod({
   name: 'updateSelected',
   schema: { id: String, num: Number },
   open: true,
-  run({ id, num }) {
-    return Selected.update(
+  async run({ id, num }) {
+    return Selected.updateAsync(
       { _id: id },
       { $set: { num } }
     );

@@ -251,7 +251,7 @@ export const createMethod = config => {
   const applyOptions = {
     ...Methods.config.options,
     ...options,
-    isFromCallAsync: true // mimic callAsync through isFromCallAsync
+    ...(Meteor.isFibersDisabled ? { returnServerResultPromise: true } : { isFromCallAsync: true }) // in 3.x, use returnServerResultPromise. in 2.x, mimic callAsync through isFromCallAsync.
   };
 
   const checkLoggedIn = !(open ?? Methods.config.open);
@@ -383,7 +383,7 @@ export const createMethod = config => {
    * @returns {Promise<T>} - Result of the method
    */
   function call(...args) {
-    if (Meteor.isClient) {
+    if (Meteor.isClient && !Meteor.isFibersDisabled) { // Meteor 2.x
       return new Promise((resolve, reject) => {
         const stub = Meteor.applyAsync(name, args, applyOptions, (error, result) => {
           if (error) {
@@ -394,9 +394,8 @@ export const createMethod = config => {
         });
 
         // catch exceptions on the stub and re-route them to the promise wrapper
-        if (applyOptions.throwStubExceptions) {
-          const isThenable = stub && typeof stub.then === 'function';
-          if (isThenable) stub.catch(error => reject(error));
+        if (applyOptions.throwStubExceptions && stub && typeof stub.then === 'function') {
+          stub.catch(error => reject(error));
         }
       });
     }

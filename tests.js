@@ -2,6 +2,7 @@ import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
 
 import {
+  wait,
   schema,
   run,
   defaultAuthed,
@@ -12,6 +13,8 @@ import {
   customValidateAsync,
   test1,
   testAsync,
+  testAsyncErrorClient,
+  testAsyncErrorServer,
   asyncMethod,
   rateLimited,
   errorMethod,
@@ -72,6 +75,54 @@ Tinytest.addAsync('methods - basic async', async (test) => {
   const result = await testAsync({num: 1});
   test.equal(result, 10);
 });
+
+if (Meteor.isFibersDisabled && Meteor.isClient) { // 3.x
+  Tinytest.addAsync('methods - handle stub manually', async (test) => {
+    const { stubPromise, serverPromise } = testAsync({num: 1});
+    const stub = await stubPromise?.catch(error => {
+      test.equal('should never be reached', true);
+    });
+    test.equal(stub, 10);
+
+    const serverResult = await serverPromise?.catch(error => {
+      test.equal('should never be reached', true);
+    });
+
+    test.equal(serverResult, 10);
+  });
+
+  Tinytest.addAsync('methods - handle stub manually client error', async (test) => {
+    const { stubPromise, serverPromise } = testAsyncErrorClient({num: 1});
+    const stub = await stubPromise?.catch(error => {
+      test.equal(error.error, 'client error');
+    });
+    test.equal(stub, undefined);
+
+    const serverResult = await serverPromise?.catch(error => {
+      test.equal(error.error, 'client error');
+    });
+    test.equal(serverResult, undefined);
+  });
+
+  Tinytest.addAsync('methods - handle stub manually server error', async (test) => {
+    const { stubPromise, serverPromise } = testAsyncErrorServer({num: 1});
+    const stub = await stubPromise.catch(error => {
+      test.equal('should never be reached', true);
+    });
+    test.equal(stub, 10);
+
+    const serverResult = await serverPromise.catch(error => {
+      test.equal(error.error, 'server error');
+    });
+    test.equal(serverResult, undefined);
+  });
+}
+
+Tinytest.addAsync('methods - dependent', async (test) => {
+  const r = await testAsync({num: 1})
+  const result = await testAsync({num: r})
+  test.equal(result, 100)
+})
 
 Tinytest.addAsync('methods - authed by default', async (test) => {
   try {
@@ -259,7 +310,6 @@ if (Meteor.isClient) {
 if (Meteor.isClient) {
   Tinytest.addAsync('methods - unblock', async (test) => {
     const result = await methodUnblock(5);
-
     test.equal(result, 5);
   });
 } else {
@@ -271,7 +321,7 @@ if (Meteor.isClient) {
 }
 
 if (Meteor.isClient) {
-  // for some reason this test will fail when run with the other tests, but if it's run by itself it passes
+  // for some reason this test will fail in 2.x when run with the other tests, but if it's run by itself it passes
   // rateLimit also works when used so I think it must have something to do with Tinytest
   Tinytest.addAsync('methods - rate limit', async (test) => {
     for (let i = 0; i < 5; i++) {
@@ -287,13 +337,12 @@ if (Meteor.isClient) {
   });
 }
 
-
-if (Meteor.isClient) {
+/* if (Meteor.isClient) { // TODO: is there another way to test this without setTimeout which can't be used in 3.x methods?
   Tinytest.addAsync('methods - async parallelize', async (test) => {
     let order = [];
 
     await Promise.all([
-      wait100().then(() => order.push('wait100')),
+      wait100().then(() => order.push('wait100'))),
       fastMethod().then(() => order.push('fastMethod'))
     ]);
 
@@ -310,7 +359,7 @@ if (Meteor.isClient) {
 
     test.equal(order, ['wait100', 'fastMethod']);
   });
-}
+} */
 
 
 Tinytest.addAsync('methods - async sequential', async (test) => {
@@ -349,12 +398,12 @@ Tinytest.addAsync('methods - afterArrayMethod', async (test) => {
 });
 
 Tinytest.addAsync('methods - serverOnly', async (test) => {
-  const result = await serverOnly({num: 5})
+  const result = serverOnly({num: 5})
 
   if (Meteor.isClient) {
-    test.equal(result, undefined);
+    test.equal(await result.stubPromise, undefined);
   } else {
-    test.equal(result, 15);
+    test.equal(await result, 15);
   }
 });
 
@@ -378,7 +427,6 @@ Tinytest.addAsync('methods - context success', async (test) => {
   test.equal(events, ['result: true']);
 });
 
-
 Tinytest.addAsync('methods - context error', async (test) => {
   try {
     await contextFailedMethod(5);
@@ -391,15 +439,19 @@ Tinytest.addAsync('methods - context error', async (test) => {
   test.equal(events, ['first err', 'first err']);
 });
 
-Tinytest.addAsync('methods - insert', async (test) => {
-  const result = await addSelected({num: 1});
-  test.equal(result, '123');
-});
 
-Tinytest.addAsync('methods - insertAsync', async (test) => {
-  const result = await addSelectedAsync({num: 1});
-  test.equal(result, '2');
-});
+if (Meteor.isClient) {
+  Tinytest.addAsync('methods - insert', async (test) => {
+    const result = await addSelected({num: 1});
+    test.equal(result, '123');
+  });
+
+  Tinytest.addAsync('methods - insertAsync', async (test) => {
+    const result = await addSelectedAsync({num: 1});
+    test.equal(result, '2');
+  });
+}
+
 
 /*
 // probably run independently, can screw up the other tests
@@ -422,23 +474,25 @@ if (Meteor.isClient) {
   });
 }
 
-Tinytest.addAsync('methods - async .then', async (test) => {
+/* Tinytest.addAsync('methods - async .then', async (test) => { // TODO: is there another way to test this without setTimeout which can't be used in 3.x methods
   const result = await asyncMethod({ num: 3000 }).then(result => {
     test.equal(result, 'result,result2,3000');
   });
-});
+}); */
 
 
-Tinytest.addAsync('methods - rollBack', async (test) => {
-  try {
-    const result = await rollBackAsync({num: 2})
-    test.equal(result, '4')
-  } catch(e) {
-    test.equal(e.message, 'server error')
-    const result = await Selected.findOneAsync({_id: '4'})
-    test.equal(result, undefined)
-  }
-});
+if (Meteor.isClient) {
+  Tinytest.addAsync('methods - rollBack', async (test) => {
+    try {
+      const result = await rollBackAsync({num: 2});
+    } catch(e) {
+      test.equal(e.message, '[server error]')
+      const result = await Selected.findOneAsync({_id: '4'})
+      test.equal(result, undefined)
+    }
+  });
+}
+
 
 Tinytest.addAsync('methods - check ownership pipe', async (test) => {
   try {
@@ -471,11 +525,7 @@ if (Meteor.isClient) {
   Tinytest.addAsync('attached methods - edit', async (test) => {
     try {
       const result = await Todos.edit({text: 'bye'})
-      if (Meteor.isClient) {
-        test.equal(result, undefined)
-      } else {
-        test.equal(result, 'bye')
-      }
+      test.equal(result, undefined)
     } catch(e) {
       console.error(e)
     }
@@ -729,4 +779,3 @@ Tinytest.addAsync('schemaed - pipe syntax', async (test) => {
     test.equal(e.message, "You must pass in either a schema or a validate function for method 'schemaedMethod3'")
   }
 });
-

@@ -1,6 +1,6 @@
 # Method
 
-Method is an easy way to create Meteor `methods` with Optimistic UI. It's built with Meteor 3.0 in mind. It's meant to be a drop in replacement for [Validated Method](https://github.com/meteor/validated-method) and comes with additional features:
+Method is an easy way to create Meteor `methods` with Optimistic UI. It's built with Meteor 3.0 in mind and is compatible with Meteor 2.x to make migration easy. It's meant to be a drop in replacement for [Validated Method](https://github.com/meteor/validated-method) and comes with additional features:
 
 * Before and after hooks
 * Global before and after hooks for all methods
@@ -15,7 +15,9 @@ Method is an easy way to create Meteor `methods` with Optimistic UI. It's built 
 ## Usage
 
 ### Add the package to your app
-`meteor add jam:method`
+`meteor add jam:method@1.6.0-rc.4`
+
+`Note`: The specific version number `@1.6.0-rc.4` must be specified as above at this time. It's there for Meteor 3.0 compatibility reasons since 3.0 is in a pre-release state. Once Meteor 3.0 is officially released, the specific version will not be required.
 
 ### Create a method
 `name` is required and will be how Meteor's internals identifies it.
@@ -30,14 +32,14 @@ import { createMethod } from 'meteor/jam:method'; // can import { Methods } from
 export const create = createMethod({
   name: 'todos.create',
   schema: Todos.schema, // using jam:easy-schema in this example
-  run({ text }) {
+  async run({ text }) {
     const todo = {
       text,
       done: false,
       createdAt: new Date(),
       authorId: Meteor.userId(), // can also use this.userId instead of Meteor.userId()
     }
-    const todoId = Todos.insert(todo);
+    const todoId = await Todos.insertAsync(todo);
     return todoId;
   }
 });
@@ -77,25 +79,6 @@ export const create = createMethod({
   validate(args) {
     validator(args, schema)
   },
-  run({ text }) {
-    const todo = {
-      text,
-      done: false,
-      createdAt: new Date(),
-      authorId: Meteor.userId() // can also use this.userId instead of Meteor.userId()
-    }
-    const todoId = Todos.insert(todo);
-    return todoId;
-  }
-});
-```
-
-### Async support
-It also supports using `*Async` Collection methods, e.g.:
-```js
-export const create = createMethod({
-  name: 'todos.create',
-  schema: Todos.schema,
   async run({ text }) {
     const todo = {
       text,
@@ -374,6 +357,25 @@ By default, this package uses the following `options`:
 };
 ```
 See [Configuring](#configuring-optional) below to set `options` for all methods.
+
+### Working with the stub result (Meteor 3.0+)
+In Meteor 3.0+, you can optionally take action with the stub result, i.e. the result when the method simulation is run on the client, before the server has returned with the final result or error. This can come in handy when you want to make your app feel instant for the user and you're relatively sure the action will succeed, e.g. when inserting new documents into the database.
+
+```js
+  const { stubPromise, serverPromise } = create();
+  const _id = await stubPromise.catch(error => {
+    // optionally handle a stub error
+  });
+
+  // take action with the _id stub result, for example, route to a new page
+  router.go(`/detail/${_id}`)
+
+  const serverResult = await serverPromise.catch(error => {
+    // handle server error, rollback changes as needed, for example route to home
+    router.go('/')
+    alert('sorry, could not create')
+  });
+```
 
 ## Configuring (optional)
 If you like the defaults, then you won't need to configure anything. But there is some flexibility in how you use this package.
