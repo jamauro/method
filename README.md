@@ -370,7 +370,7 @@ In Meteor 3.0+, you can optionally take action with the stub result, i.e. the re
   // take action with the _id stub result, for example, route to a new page
   router.go(`/detail/${_id}`)
 
-  const serverResult = await serverPromise.catch(error => {
+  await serverPromise.catch(error => {
     // handle server error, rollback changes as needed, for example route to home
     router.go('/')
     alert('sorry, could not create')
