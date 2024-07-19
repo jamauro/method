@@ -15,9 +15,7 @@ Method is an easy way to create Meteor `methods` with Optimistic UI. It's built 
 ## Usage
 
 ### Add the package to your app
-`meteor add jam:method@1.6.0-rc.4`
-
-`Note`: The specific version number `@1.6.0-rc.4` must be specified as above at this time. It's there for Meteor 3.0 compatibility reasons since 3.0 is in a pre-release state. Once Meteor 3.0 is officially released, the specific version will not be required.
+`meteor add jam:method@1.6.0`
 
 ### Create a method
 `name` is required and will be how Meteor's internals identifies it.
@@ -184,10 +182,13 @@ import { schema } from './schema';
 export const Todos = new Mongo.Collection('todos');
 
 Todos.attachSchema(schema); // if you're using jam:easy-schema
-(async() => {
+
+const attach = async () => {
   const methods = await import('./methods.js') // dynamic import is recommended
-  Todos.attachMethods(methods);
-})();
+  return Todos.attachMethods(methods); // if you prefer not to use dynamic import, you can simply call attachMethods synchronously
+};
+
+attach().catch(error => console.error('Error attaching methods', error))
 ```
 `attachMethods` accepts the method `options` as an optional second parameter. See [Configuring](#configuring-optional) for a list of the `options`.
 

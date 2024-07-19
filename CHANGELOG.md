@@ -1,3 +1,6 @@
+## 1.6.0
+* fix: bump `versionsFrom` to official Meteor 3.0 release
+
 ## 1.6.0-rc.4
 * feat: Meteor 3.0 compatability with the latest release candidate
 
