@@ -15,7 +15,7 @@ Method is an easy way to create Meteor `methods` with Optimistic UI. It's built 
 ## Usage
 
 ### Add the package to your app
-`meteor add jam:method@1.6.0`
+`meteor add jam:method`
 
 ### Create a method
 `name` is required and will be how Meteor's internals identifies it.
