@@ -546,5 +546,8 @@ export const setDone = server(async ({ _id, done }) => {
 ```
 Now when you call `Todos.setDone` from the client it will only run on the server.
 
+## Using with `jam:offline`
+`jam:method` integrates with `jam:offline` to automatically queue methods when a user is offline. You don't need to configure anything in `jam:method` for this. 🎉 `jam:offline` will then replay them when the user reconnects. See [jam:offline](https://github.com/jamauro/offline) for more details.
+
 ## Coming from `Validated Method`?
 You may be familiar with `mixins` and wondering where they are. With the features of this package - authenticated by default, `before` / `after` hooks, `.pipe` - your mixin code may no longer be needed or can be simplified. If you have another use case where your mixin doesn't translate, I'd love to hear it. Open a new discussion and let's chat.

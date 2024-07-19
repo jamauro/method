@@ -12,7 +12,7 @@ const config = {
 
     // Don't call the server method if the client stub throws an error, so that we don't end
     // up doing validations twice
-    throwStubExceptions: true,
+    throwStubExceptions: true
   },
   open: false,
   loggedOutError: new Meteor.Error('logged-out', 'You must be logged in')
@@ -33,6 +33,9 @@ const configure = options => {
 
   return Object.assign(config, options);
 };
+
+const hasOffline = Package['jam:offline'];
+const { Offline, queueMethod } = hasOffline ? require('meteor/jam:offline') : {};
 
 const hasEasySchema = Package['jam:easy-schema'];
 const { check, shape, pick, _getParams } = hasEasySchema ? require('meteor/jam:easy-schema') : { check: c, pick: require('./utils.js').pick };
@@ -251,7 +254,7 @@ export const createMethod = config => {
   const applyOptions = {
     ...Methods.config.options,
     ...options,
-    ...(Meteor.isFibersDisabled ? { returnServerResultPromise: true } : { isFromCallAsync: true }) // in 3.x, use returnServerResultPromise. in 2.x, mimic callAsync through isFromCallAsync.
+    ...(Meteor.isFibersDisabled ? { returnServerResultPromise: true } : { isFromCallAsync: true }), // in 3.x, use returnServerResultPromise. in 2.x, mimic callAsync through isFromCallAsync.
   };
 
   const checkLoggedIn = !(open ?? Methods.config.open);
@@ -383,6 +386,14 @@ export const createMethod = config => {
    * @returns {Promise<T>} - Result of the method
    */
   function call(...args) {
+    if (Meteor.isClient && hasOffline) {
+      const { autoSync } = Offline.config;
+      if (autoSync && !Meteor.status().connected) {
+        queueMethod(name, ...args).catch(error => console.error('queueMethod error', error)); // when offline, queue the method with jam:offline
+        applyOptions.noRetry = true; // jam:offline will handle retries so we don't want to rely on Meteor's internal retry mechanism
+      }
+    }
+
     if (Meteor.isClient && !Meteor.isFibersDisabled) { // Meteor 2.x
       return new Promise((resolve, reject) => {
         const stub = Meteor.applyAsync(name, args, applyOptions, (error, result) => {

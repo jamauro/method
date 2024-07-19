@@ -1,3 +1,6 @@
+## 1.7.0
+* feat: automatically queue methods when offline when using `jam:offline`
+
 ## 1.6.0
 * fix: bump `versionsFrom` to official Meteor 3.0 release
 
