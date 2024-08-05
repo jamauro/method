@@ -307,18 +307,10 @@ if (Meteor.isClient) {
   });
 }
 
-if (Meteor.isClient) {
-  Tinytest.addAsync('methods - unblock', async (test) => {
-    const result = await methodUnblock(5);
-    test.equal(result, 5);
-  });
-} else {
-  Tinytest.addAsync('methods - unblock resolves correctly on server', async (test) => {
-    const result = await methodUnblock(5);
-
-    test.equal(result, 10);
-  });
-}
+Tinytest.addAsync('methods - unblock', async (test) => {
+  const result = await methodUnblock(5);
+  test.equal(result, 10);
+});
 
 if (Meteor.isClient) {
   // for some reason this test will fail in 2.x when run with the other tests, but if it's run by itself it passes
@@ -419,6 +411,7 @@ Tinytest.addAsync('methods - async pipeline', async (test) => {
   test.equal(result, 14.5);
 });
 
+
 Tinytest.addAsync('methods - context success', async (test) => {
   const result = await contextMethod(5);
   test.equal(result, true);
@@ -438,7 +431,6 @@ Tinytest.addAsync('methods - context error', async (test) => {
   const events = await getEvents();
   test.equal(events, ['first err', 'first err']);
 });
-
 
 if (Meteor.isClient) {
   Tinytest.addAsync('methods - insert', async (test) => {
@@ -525,7 +517,7 @@ if (Meteor.isClient) {
   Tinytest.addAsync('attached methods - edit', async (test) => {
     try {
       const result = await Todos.edit({text: 'bye'})
-      test.equal(result, undefined)
+      test.equal(result, 'bye');
     } catch(e) {
       console.error(e)
     }
@@ -634,11 +626,7 @@ Tinytest.addAsync('functional syntax - editMethod', async (test) => {
 Tinytest.addAsync('functional syntax - editMethod2', async (test) => {
   try {
     const result = await editMethod2({text: 'hi'})
-    if (Meteor.isClient) {
-      test.equal(result, undefined)
-    } else {
-      test.equal(result, 'hi')
-    }
+    test.equal(result, 'hi')
   } catch(e) {
     console.error(e)
   }
@@ -647,11 +635,7 @@ Tinytest.addAsync('functional syntax - editMethod2', async (test) => {
 Tinytest.addAsync('functional syntax - editMethod3', async (test) => {
   try {
     const result = await editMethod3({text: 'hi'})
-    if (Meteor.isClient) {
-      test.equal(result, undefined)
-    } else {
-      test.equal(result, 'hi')
-    }
+    test.equal(result, 'hi')
   } catch(e) {
     console.error(e)
   }
@@ -660,11 +644,7 @@ Tinytest.addAsync('functional syntax - editMethod3', async (test) => {
 Tinytest.addAsync('functional syntax - editMethod4', async (test) => {
   try {
     const result = await editMethod4({text: 'hi'})
-    if (Meteor.isClient) {
-      test.equal(result, undefined)
-    } else {
-      test.equal(result, 'hi')
-    }
+    test.equal(result, 'hi')
   } catch(e) {
     console.error(e)
   }
@@ -718,11 +698,7 @@ Tinytest.addAsync('functional syntax - openMethod', async (test) => {
 Tinytest.addAsync('functional syntax - openMethod2', async (test) => {
   try {
     const result = await openMethod2({text: 'hi'})
-    if (Meteor.isClient) {
-      test.equal(result, undefined)
-    } else {
-      test.equal(result, 'hi')
-    }
+    test.equal(result, 'hi')
   } catch(e) {
     console.error(e)
   }
@@ -731,11 +707,7 @@ Tinytest.addAsync('functional syntax - openMethod2', async (test) => {
 Tinytest.addAsync('functional syntax - openMethod3', async (test) => {
   try {
     const result = await openMethod3({text: 'hi'})
-    if (Meteor.isClient) {
-      test.equal(result, undefined)
-    } else {
-      test.equal(result, 'hi')
-    }
+    test.equal(result, 'hi')
   } catch(e) {
     console.error(e)
   }

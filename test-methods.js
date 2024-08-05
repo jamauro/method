@@ -178,7 +178,8 @@ export const methodUnblock = createMethod({
   name: 'methodUnblock',
   schema: Number,
   open: true,
-  run(n) {
+  serverOnly: true,
+  async run(n) {
     this.unblock();
 
     if (Meteor.isServer) {
@@ -352,7 +353,8 @@ export const contextMethod = createMethod({
 export const contextFailedMethod = createMethod({
   name: 'contextFailedMethod',
   schema: Number,
-  open: true
+  open: true,
+  ...(!Meteor.isFibersDisabled && { serverOnly: true }), // in Meteor 2.x without running this on the server was producing a cached result of getEvents for some reason, not sure if it's a Tinytest bug or what. in 3.x it works as expected
 }).pipe(
   (input, context) => {
     resetEvents();
@@ -430,7 +432,7 @@ export const getEvents = createMethod({
   schema: Any,
   open: true,
   run() {
-    return events;
+    return events
   }
 });
 
@@ -532,7 +534,7 @@ export const updateSelected = createMethod({
 async function checkOwnership(args) {
   const { ownerId } = args;
 
-  const numberOwner = Numbers.findOneAsync({ownerId});
+  const numberOwner = await Numbers.findOneAsync({ownerId});
 
   if (!numberOwner) {
     throw new Meteor.Error('not-authorized')

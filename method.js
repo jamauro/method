@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { check as c, Match } from 'meteor/check';
 import { Mongo } from 'meteor/mongo';
+import { DDP } from 'meteor/ddp-client';
 
 const config = {
   before: [],
@@ -74,7 +75,7 @@ export function server(fn) {
     fn[serverSymbol] = true;
     return fn;
   } else {
-    if (fn) {
+    if (fn && hasEasySchema) {
       Object.defineProperty(noop, 'name', { value: fn.name });
       Object.getOwnPropertySymbols(fn).map(symbol => noop[symbol] = fn[symbol]);
       noop[paramsSymbol] = _getParams(fn);
@@ -254,7 +255,7 @@ export const createMethod = config => {
   const applyOptions = {
     ...Methods.config.options,
     ...options,
-    ...(Meteor.isFibersDisabled ? { returnServerResultPromise: true } : { isFromCallAsync: true }), // in 3.x, use returnServerResultPromise. in 2.x, mimic callAsync through isFromCallAsync.
+    ...(Meteor.isFibersDisabled ? { returnServerResultPromise: true } : { isFromCallAsync: true })
   };
 
   const checkLoggedIn = !(open ?? Methods.config.open);
@@ -386,6 +387,10 @@ export const createMethod = config => {
    * @returns {Promise<T>} - Result of the method
    */
   function call(...args) {
+    if (serverOnly ?? Methods.config.serverOnly) {
+      applyOptions.returnStubValue = false;
+    }
+
     if (Meteor.isClient && hasOffline) {
       const { autoSync } = Offline.config;
       if (autoSync && !Meteor.status().connected) {
@@ -395,8 +400,20 @@ export const createMethod = config => {
     }
 
     if (Meteor.isClient && !Meteor.isFibersDisabled) { // Meteor 2.x
+      /* prevent method from running inside another method's simulation by resetting the CurrentMethodInvocation and using isFromCallAsync in applyOptions.
+        this can happen if you call a second method inside a .then, for example:
+
+        method1.then(() => { method2() })
+
+        in general, it's recommended to use async await syntax which will avoid this issue all together but this is here as a preventative measure.
+      */
+      DDP._CurrentMethodInvocation._set();
+      DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
+
       return new Promise((resolve, reject) => {
         const stub = Meteor.applyAsync(name, args, applyOptions, (error, result) => {
+          DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false);
+
           if (error) {
             reject(error)
           } else {

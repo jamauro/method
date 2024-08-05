@@ -1,3 +1,7 @@
+## 1.7.1
+* fix: Meteor 3.x - ensure `server` or `serverOnly` methods return the expected result to the client
+* fix: Meteor 2.x - solve for scenario where method is running inside another method's simulation
+
 ## 1.7.0
 * feat: automatically queue methods when offline when using `jam:offline`
 
