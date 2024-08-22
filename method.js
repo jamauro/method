@@ -252,14 +252,16 @@ export const createMethod = config => {
     pipeline = [run];
   }
 
+  const checkLoggedIn = !(open ?? Methods.config.open);
+  const isServerOnly = serverOnly ?? Methods.config.serverOnly;
+  const validate = schema ? getValidator(schema, run) : v;
+
   const applyOptions = {
     ...Methods.config.options,
     ...options,
+    ...(isServerOnly && { returnStubValue: false }),
     ...(Meteor.isFibersDisabled ? { returnServerResultPromise: true } : { isFromCallAsync: true })
   };
-
-  const checkLoggedIn = !(open ?? Methods.config.open);
-  const validate = schema ? getValidator(schema, run) : v;
 
   /**
    * @template D
@@ -356,7 +358,7 @@ export const createMethod = config => {
 
   if (Meteor.isClient) {
     const register = (name, method) => {
-      if (serverOnly ?? Methods.config.serverOnly) return;
+      if (isServerOnly) return;
       return Meteor.methods({ [name]: method });
     };
 
@@ -387,15 +389,12 @@ export const createMethod = config => {
    * @returns {Promise<T>} - Result of the method
    */
   function call(...args) {
-    if (serverOnly ?? Methods.config.serverOnly) {
-      applyOptions.returnStubValue = false;
-    }
-
-    if (Meteor.isClient && hasOffline) {
-      const { autoSync } = Offline.config;
-      if (autoSync && !Meteor.status().connected) {
+    if (Meteor.isClient && Offline?.config.autoSync) {
+      if (!Meteor.status().connected) {
         queueMethod(name, ...args).catch(error => console.error('queueMethod error', error)); // when offline, queue the method with jam:offline
         applyOptions.noRetry = true; // jam:offline will handle retries so we don't want to rely on Meteor's internal retry mechanism
+      } else if (applyOptions.noRetry && !options.noRetry) {
+        delete applyOptions.noRetry; // reset noRetry after it's been set to true while offline
       }
     }
 

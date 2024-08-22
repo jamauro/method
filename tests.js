@@ -16,6 +16,7 @@ import {
   testAsyncErrorClient,
   testAsyncErrorServer,
   asyncMethod,
+  noRetryMethod,
   rateLimited,
   errorMethod,
   wait100,
@@ -63,6 +64,8 @@ import {
   schemaedMethod3,
   Todos
 } from './test-methods.js';
+
+Meteor.userId = () => '1'; // Mocked
 
 Tinytest.addAsync('methods - basic', async (test) => {
   const result = await test1();
@@ -751,3 +754,66 @@ Tinytest.addAsync('schemaed - pipe syntax', async (test) => {
     test.equal(e.message, "You must pass in either a schema or a validate function for method 'schemaedMethod3'")
   }
 });
+
+if (Meteor.isClient) {
+  Tinytest.addAsync('jam:offline - Meteor.applyAsync is called with the expected options', async (test) => {
+    let applyOptions;
+
+    const originalApply = Meteor.applyAsync;
+    Meteor.applyAsync = async function (name, args, options, callback) {
+      applyOptions = options;
+      return originalApply.call(this, name, args, options, callback);
+    };
+
+    await wait(100);
+    testAsync({num: 1});
+    test.equal(applyOptions.noRetry, undefined);
+
+    await wait(100);
+    Meteor.disconnect();
+    await wait(100);
+    testAsync({num: 1});
+    await wait(100);
+    test.equal(applyOptions.noRetry, true);
+
+    await wait(100);
+    Meteor.reconnect();
+    await wait(100);
+    testAsync({num: 1});
+    await wait(100)
+    test.equal(applyOptions.noRetry, undefined);
+
+    Meteor.applyAsync = originalApply;
+  });
+
+  Tinytest.addAsync('jam:offline - Meteor.applyAsync noRetry is preserved when explicitly set', async (test) => {
+    let applyOptions;
+
+    const originalApply = Meteor.applyAsync;
+    Meteor.applyAsync = async function (name, args, options, callback) {
+      applyOptions = options;
+      return originalApply.call(this, name, args, options, callback);
+    };
+
+    await wait(100);
+    noRetryMethod({num: 1});
+    test.equal(applyOptions.noRetry, true);
+
+    await wait(100);
+    Meteor.disconnect();
+    await wait(100);
+    noRetryMethod({num: 1});
+    await wait(100);
+    test.equal(applyOptions.noRetry, true);
+
+    await wait(100);
+    Meteor.reconnect();
+    await wait(100);
+    noRetryMethod({num: 1});
+    await wait(100)
+    test.equal(applyOptions.noRetry, true);
+
+    Meteor.applyAsync = originalApply;
+  });
+}
+

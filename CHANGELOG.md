@@ -1,3 +1,7 @@
+## 1.7.2
+* fix: when using `jam:offline`, reset `noRetry` when the user has reconnected
+* fix: under-the-hood optimizations
+
 ## 1.7.1
 * fix: Meteor 3.x - ensure `server` or `serverOnly` methods return the expected result to the client
 * fix: Meteor 2.x - solve for scenario where method is running inside another method's simulation

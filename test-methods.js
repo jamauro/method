@@ -165,6 +165,22 @@ export const asyncMethod = createMethod({
   }
 });
 
+export const noRetryMethod = createMethod({
+  name: 'noRetryMethod',
+  schema: {num: Number},
+  open: true,
+  options: {
+    noRetry: true
+  },
+  async run({num}) {
+    if (Meteor.isServer) {
+      await wait(200)
+    }
+
+    return num * 10;
+  }
+});
+
 export const errorMethod = createMethod({
   name: 'errorMethod',
   schema: Any,
