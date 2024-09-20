@@ -181,6 +181,15 @@ export const noRetryMethod = createMethod({
   }
 });
 
+export const voidMethod = createMethod({
+  name: 'voidMethod',
+  schema: {num: Number},
+  open: true,
+  async run({num}) {
+    console.log('void')
+  }
+});
+
 export const errorMethod = createMethod({
   name: 'errorMethod',
   schema: Any,
@@ -328,9 +337,20 @@ export const simplePipeline = createMethod({
   schema: Number,
   open: true,
 }).pipe(
-    (n) => n + 5,
-    (n) => n - 1,
-    (n) => n + 0.5
+  (n) => n + 5,
+  (n) => n - 1,
+  (n) => n + 0.5
+);
+
+export const voidPipeline = createMethod({
+  name: 'voidPipeline',
+  schema: Number,
+  open: true,
+}).pipe(
+  async function () { console.log('void pipeline') },
+  async (n) => n + 5,
+  async (n) => n - 1,
+  async (n) => n + 0.5
 );
 
 export const asyncPipeline = createMethod({

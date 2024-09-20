@@ -1,3 +1,6 @@
+## 1.7.3
+* fix: return the correct result with a void run function
+
 ## 1.7.2
 * fix: when using `jam:offline`, reset `noRetry` when the user has reconnected
 * fix: under-the-hood optimizations

@@ -17,6 +17,7 @@ import {
   testAsyncErrorServer,
   asyncMethod,
   noRetryMethod,
+  voidMethod,
   rateLimited,
   errorMethod,
   wait100,
@@ -28,6 +29,7 @@ import {
   serverOnly,
   configMethod,
   simplePipeline,
+  voidPipeline,
   asyncPipeline,
   methodUnblock,
   contextMethod,
@@ -167,6 +169,15 @@ Tinytest.addAsync('methods - custom validate async fail', async (test) => {
     test.equal('should never be reached', true);
   } catch (error) {
     test.equal(error, 'fail')
+  }
+});
+
+Tinytest.addAsync('methods - void', async (test) => {
+  try {
+    const result = await voidMethod({ num: 20 });
+    test.equal(result, undefined)
+  } catch (error) {
+    test.equal('should never be reached', true);
   }
 });
 
@@ -404,6 +415,12 @@ Tinytest.addAsync('methods - serverOnly', async (test) => {
 
 Tinytest.addAsync('methods - pipeline', async (test) => {
   const result = await simplePipeline(10)
+
+  test.equal(result, 14.5);
+});
+
+Tinytest.addAsync('methods - void pipeline', async (test) => {
+  const result = await voidPipeline(10)
 
   test.equal(result, 14.5);
 });

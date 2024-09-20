@@ -314,9 +314,9 @@ export const createMethod = config => {
       for (const func of fullPipeline) {
         const result = await func.call(methodInvocation, input, context);
         if (func === run) {
-          runResult = result
+          runResult = result;
         }
-        input = (run ? (beforePipeline.includes(func) ? input : afterPipeline.includes(func) ? runResult : result) : result) || input; // if you return nothing from one of the steps in the pipeline, it will continue with the previous input
+        input = run ? (beforePipeline.includes(func) ? input : afterPipeline.includes(func) ? runResult : result) : result || input; // if you return nothing from one of the steps in the pipeline, it will continue with the previous input
       }
 
       return input;
