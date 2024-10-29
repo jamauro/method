@@ -1,6 +1,6 @@
 Package.describe({
   name: 'jam:method',
-  version: '1.7.3',
+  version: '1.8.0',
   summary: 'An easy way to create Meteor methods',
   git: 'https://github.com/jamauro/method',
   documentation: 'README.md'

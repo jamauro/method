@@ -107,6 +107,11 @@ export declare const createMethod: {
   ): { pipe: CreateMethodPipeline<any> };
 
   <T>(method: T): (...args?: any) => Promise<T>;
+
+  call<S, T>(
+    context: Meteor.MethodThisType,
+    ...args: Array<S | z.input<S>>
+  ): Promise<T>;
 };
 
 type Methods = {

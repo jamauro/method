@@ -378,6 +378,18 @@ In Meteor 3.0+, you can optionally take action with the stub result, i.e. the re
   });
 ```
 
+### Mocking the method context
+You can mock the method invocation context, aka the `this` value inside the method, by invoking the method with `.call(context, args)`. This is particularly useful for unit testing to mock the `this.userId`:
+
+```js
+const context = {
+  userId: 'fakeUserId',
+  // ... //
+}
+
+await create.call(context, {...})
+```
+
 ## Configuring (optional)
 If you like the defaults, then you won't need to configure anything. But there is some flexibility in how you use this package.
 

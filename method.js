@@ -7,6 +7,8 @@ const config = {
   before: [],
   after: [],
   serverOnly: false,
+  open: false,
+  loggedOutError: new Meteor.Error('logged-out', 'You must be logged in'),
   options: {
     // Make it possible to get the ID of an inserted item
     returnStubValue: true,
@@ -14,9 +16,7 @@ const config = {
     // Don't call the server method if the client stub throws an error, so that we don't end
     // up doing validations twice
     throwStubExceptions: true
-  },
-  open: false,
-  loggedOutError: new Meteor.Error('logged-out', 'You must be logged in')
+  }
 };
 
 const configure = options => {
@@ -24,12 +24,12 @@ const configure = options => {
     before: Match.Maybe(Match.OneOf([Function], Function)),
     after: Match.Maybe(Match.OneOf([Function], Function)),
     serverOnly: Match.Maybe(Boolean),
+    open: Match.Maybe(Boolean),
+    loggedOutError: Match.Maybe(Match.Where(e => e instanceof Meteor.Error || e instanceof Error)),
     options: Match.Maybe({
       returnStubValue: Match.Maybe(Boolean),
       throwStubExceptions: Match.Maybe(Boolean)
-    }),
-    open: Match.Maybe(Boolean),
-    loggedOutError: Match.Maybe(Match.Where(e => e instanceof Meteor.Error || e instanceof Error))
+    })
   });
 
   return Object.assign(config, options);
@@ -445,6 +445,17 @@ export const createMethod = config => {
    * @returns {import('zod').output<Z> | D}
    */
   call.validate.only = data => validate.only(data);
+
+  /**
+   * Invoke the method with a specific context. Useful for mocking specific properties like `userId` in testing scenarios.
+   * @param {object} context - The method invocation context
+   * @param {...(z.input<S> | S)[]} args - Arguments for the method
+   * @returns {Promise<T>} - Result of the method
+   */
+  call.call = (context, ...args) => {
+    context.name = name;
+    return method.apply(context, args);
+  }
 
   setCreated(call);
 

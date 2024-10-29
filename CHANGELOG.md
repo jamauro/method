@@ -1,3 +1,6 @@
+## 1.8.0
+* feat: mock the method invocation context using `.call(context, args)`
+
 ## 1.7.3
 * fix: return the correct result with a void run function
 

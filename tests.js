@@ -5,6 +5,7 @@ import {
   wait,
   schema,
   run,
+  mockedMethod,
   defaultAuthed,
   checkSchema,
   zodSchema,
@@ -66,6 +67,18 @@ import {
   schemaedMethod3,
   Todos
 } from './test-methods.js';
+
+Tinytest.addAsync('methods - mock context', async(test) => {
+  const mockContext = {
+    userId: 'fakeUserId',
+    connection: { id: 'fakeConnectionId' }
+  };
+
+  const result = await mockedMethod.call(mockContext, { num: 5 });
+
+  test.equal(result.userId, 'fakeUserId');
+  test.equal(result.num, 5);
+})
 
 Meteor.userId = () => '1'; // Mocked
 

@@ -21,6 +21,15 @@ function log(input, pipeline) {
   });
 };
 
+export const mockedMethod = createMethod({
+  name: 'mockedMethod',
+  open: true,
+  schema: {num: Number},
+  run({ num }) {
+    return { userId: `${this.userId}`, num };
+  }
+});
+
 export const defaultAuthed = createMethod({
   name: 'defaultAuthed',
   schema: Any,
