@@ -1,3 +1,6 @@
+## 1.8.1
+* fix: when using functional-style syntax, ensure customizations like `server` are preserved correctly
+
 ## 1.8.0
 * feat: mock the method invocation context using `.call(context, args)`
 

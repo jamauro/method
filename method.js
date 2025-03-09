@@ -111,7 +111,7 @@ const clearSymbols = fn => Object.getOwnPropertySymbols(fn).forEach(symbol => de
 
 const getMetadata = fn => {
   const metadata = { schema: fn[schemaSymbol], serverOnly: fn[serverSymbol], open: fn[openSymbol], params: fn[paramsSymbol] };
-  clearSymbols(fn);
+  setTimeout(() => clearSymbols(fn), 1); // clearing immediately resulted in undefined values when we access the metadata later. not exactly sure why this happens but we wait a tick before clearing the symbols to avoid that issue.
 
   return metadata;
 };
@@ -255,7 +255,6 @@ export const createMethod = config => {
   const checkLoggedIn = !(open ?? Methods.config.open);
   const isServerOnly = serverOnly ?? Methods.config.serverOnly;
   const validate = schema ? getValidator(schema, run) : v;
-
   const applyOptions = {
     ...Methods.config.options,
     ...options,

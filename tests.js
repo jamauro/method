@@ -53,6 +53,7 @@ import {
   editMethod2,
   editMethod3,
   editMethod4,
+  editMethod5,
   closedMethod,
   closedMethod2,
   closedMethod3,
@@ -673,6 +674,18 @@ Tinytest.addAsync('functional syntax - editMethod3', async (test) => {
     console.error(e)
   }
 });
+
+if (Meteor.isClient) {
+  Tinytest.addAsync('functional syntax - editMethod5', async (test) => {
+    try {
+      const result = await editMethod5({text: 'hi'})
+      test.equal(result, 'sup')
+    } catch(e) {
+      console.error(e)
+    }
+  });
+}
+
 
 Tinytest.addAsync('functional syntax - editMethod4', async (test) => {
   try {

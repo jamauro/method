@@ -675,12 +675,20 @@ export const numMethod2 = createMethod(schema(Number)(async num => {
 const edit2 = async ({ text }) => await text;
 const edit3 = server(async ({ text }) => await text);
 const edit4 = async ({ text }) => await text;
+const edit5 = server(async ({ text }) => {
+  if (Meteor.isServer) {
+    return 'sup';
+  }
+  return text;
+});
+
 export const editMethod = createMethod(schema({text: String})(edit2));
 export const editMethod2 = createMethod(schema({text: String})(edit3));
 export const editMethod3 = createMethod(server(schema({text: String})(edit4)));
 export const editMethod4 = createMethod(server(schema({text: String})(async ({ text }) => {
   return await text;
 })));
+export const editMethod5 = createMethod(schema({text: String})(edit5));
 
 export const closedMethod = createMethod(schema({text: String})(authRequired));
 
