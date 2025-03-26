@@ -1,3 +1,6 @@
+## 1.8.2
+* fix: support for `jam:easy-schema` improvements
+
 ## 1.8.1
 * fix: when using functional-style syntax, ensure customizations like `server` are preserved correctly
 

@@ -2,6 +2,7 @@ import { Meteor } from 'meteor/meteor';
 import { check as c, Match } from 'meteor/check';
 import { Mongo } from 'meteor/mongo';
 import { DDP } from 'meteor/ddp-client';
+import { isObject } from './utils.js';
 
 const config = {
   before: [],
@@ -60,7 +61,7 @@ export const schema = schemaValue => fn => {
   if (Meteor.isClient && !fn) {
     fn = noop;
   }
-  fn[schemaSymbol] = hasEasySchema && schemaValue?.constructor === Object ? shape(schemaValue) : schemaValue;
+  fn[schemaSymbol] = hasEasySchema && isObject(schemaValue) ? shape(schemaValue) : schemaValue;
   return fn;
 };
 
@@ -120,7 +121,7 @@ const generateConfig = fn => {
   const { schema, serverOnly, open } = getMetadata(fn);
 
   return {
-    name: fn.name?.length > 1 ? fn.name : schema?.constructor === Object ? `${Object.keys(schema).slice(0, 3).join('_')}-${methodNum + 1}` : `${schema ? schema.name.toLowerCase() : 'method'}-${methodNum + 1}`,
+    name: fn.name?.length > 1 ? fn.name : isObject(schema) ? `${Object.keys(schema).slice(0, 3).join('_')}-${methodNum + 1}` : `${schema ? schema.name.toLowerCase() : 'method'}-${methodNum + 1}`,
     schema,
     run: fn,
     serverOnly,
@@ -204,8 +205,11 @@ const getValidator = (schema, run) => {
     return validate;
   }
 
+  const isSchemaObject = isObject(schema);
+  const { name, shaped } = hasEasySchema && isSchemaObject && schema[Object.getOwnPropertySymbols(schema)[0]] || {};
+
   /** @type {import('meteor/check').Match.Pattern} */
-  const schemaToCheck = hasEasySchema && schema.constructor === Object ? (Object.getOwnPropertySymbols(schema)[0] ? (schema['$id'] ? pick(schema, _getParams(run)) : schema) : shape(schema)) : schema;
+  const schemaToCheck = hasEasySchema && isSchemaObject ? (shaped ? (name ? pick(schema, _getParams(run)) : schema) : shape(schema)) : schema;
   validate = data => (check(data, schemaToCheck), data);
   partialSchema = hasEasySchema && shape(schemaToCheck, {optionalize: true});
   validate.only = partialSchema ? data => (check(data, partialSchema), data) : data => (check(data, pick(schema, Object.keys(data))), data);

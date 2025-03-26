@@ -1,6 +1,6 @@
 Package.describe({
   name: 'jam:method',
-  version: '1.8.1',
+  version: '1.8.2',
   summary: 'An easy way to create Meteor methods',
   git: 'https://github.com/jamauro/method',
   documentation: 'README.md'
@@ -13,7 +13,7 @@ Package.onUse(function(api) {
   api.use('mongo');
   api.use('ddp-client');
   api.use('ddp-rate-limiter', 'server');
-  api.use('jam:easy-schema@1.3.1', { weak: true });
+  api.use('jam:easy-schema@1.6.1', { weak: true });
   api.use('jam:offline@0.1.0', { weak: true });
   api.use('zodern:types@1.0.13');
   api.mainModule('method.js');

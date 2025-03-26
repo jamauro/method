@@ -1,5 +1,6 @@
 import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
+import { check, Match } from 'meteor/check';
 
 import {
   wait,
