@@ -70,6 +70,41 @@ import {
   Todos
 } from './test-methods.js';
 
+const syncMethods = {
+  sayHello() {
+    return 'hello';
+  }
+};
+
+const asyncMethods = {
+  async sayHelloAsync() {
+    return 'hello async';
+  }
+};
+
+const Things = new Mongo.Collection('things', {
+  methods: syncMethods,
+});
+
+const Stuff = new Mongo.Collection('stuff', {
+  methods: asyncMethods,
+});
+
+if (Meteor.isClient) {
+  Tinytest.addAsync('Mongo.Collection - attaches sync methods', async function (test) {
+    test.isTrue(typeof Things.sayHello === 'function');
+    test.equal(await Things.sayHello(), 'hello');
+  });
+
+  Tinytest.addAsync('Mongo.Collection - attaches async methods', async function (test) {
+    // Wait for methods to attach
+    await new Promise(resolve => setTimeout(resolve, 20));
+
+    test.isTrue(typeof Stuff.sayHelloAsync === 'function');
+    test.equal(await Stuff.sayHelloAsync(), 'hello async');
+  });
+}
+
 Tinytest.addAsync('methods - mock context', async(test) => {
   const mockContext = {
     userId: 'fakeUserId',
@@ -860,4 +895,3 @@ if (Meteor.isClient) {
     Meteor.applyAsync = originalApply;
   });
 }
-

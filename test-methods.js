@@ -3,7 +3,7 @@ import { check, Match } from 'meteor/check';
 import { createMethod, Methods, schema, open, close, server } from 'meteor/jam:method';
 import assert from 'assert';
 import { z } from 'zod';
-import SimpleSchema from 'simpl-schema';
+import SimpleSchema from 'meteor/aldeed:simple-schema';
 
 const Any = Package['jam:easy-schema'] ? require('meteor/jam:easy-schema').Any : Match.Any;
 

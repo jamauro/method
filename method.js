@@ -165,7 +165,7 @@ Mongo.Collection.prototype.attachMethods = function(methods, options = {}) {
 
       const method = createMethod({
         name: `${collection._name}.${k}`,
-        schema: schema ?? (hasEasySchema ? pick(collection.schema, params) : undefined),
+        schema: schema ?? (hasEasySchema && collection.schema ? pick(collection.schema, params) : undefined),
         run: v,
         ...options,
         ...(serverOnly && { serverOnly }),
@@ -208,7 +208,7 @@ const getValidator = (schema, run) => {
   const isSchemaObject = isObject(schema);
   const { name, shaped } = hasEasySchema && isSchemaObject && schema[Object.getOwnPropertySymbols(schema)[0]] || {};
 
-  /** @type {import('meteor/check').Match.Pattern} */
+  /** @type {import('meteor/jam:easy-schema').Pattern | import('meteor/check').Match.Pattern} */
   const schemaToCheck = hasEasySchema && isSchemaObject ? (shaped ? (name ? pick(schema, _getParams(run)) : schema) : shape(schema)) : schema;
   validate = data => (check(data, schemaToCheck), data);
   partialSchema = hasEasySchema && shape(schemaToCheck, {optionalize: true});
@@ -219,7 +219,7 @@ const getValidator = (schema, run) => {
 
 /**
  * Create a method with specified properties or given a function.
- * @template {import('meteor/check').Match.Pattern | import('zod').ZodTypeAny | import('simpl-schema').SimpleSchema} S - The schema type (jam:easy-schema, check, Zod, or simple-schema)
+ * @template {import('meteor/jam:easy-schema').Pattern | import('meteor/check').Match.Pattern | import('zod').ZodTypeAny | import('simpl-schema').SimpleSchema} S - The schema type (jam:easy-schema, check, Zod, or simple-schema)
  * @template T - The return type
  * @param {{
  *   name: string,
@@ -475,6 +475,32 @@ export const createMethod = config => {
     }
   };
 };
+
+/// allows passing in methods when setting up with new Mongo.Collection(..., { methods })
+//  by doing it this way, we get out-of-the-box intellisense. when dynamically attaching, it will require a bit more setup with JSDoc or TS so that they will see typeof methods instead of Promise
+const originalCollection = Mongo.Collection;
+Mongo.Collection = function Collection(name, options) {
+  const { methods, ...rest } = options || {};
+  const instance = new originalCollection(name, rest);
+
+  if (methods) {
+    if (methods instanceof Promise) { // I think if Meteor had better support of top-level await, we may be able to avoid this and just do methods: await import('./methods)
+      (async() => {
+        const m = await methods;
+        instance.attachMethods(m);
+      })().catch(e => console.error('error attaching methods', e))
+    } else {
+      instance.attachMethods(methods);
+    }
+  }
+
+  return instance;
+}
+
+Object.assign(Mongo.Collection, originalCollection); // preserve methods and properties
+Mongo.Collection.prototype = originalCollection.prototype;
+Mongo.Collection.prototype.constructor = Mongo.Collection;
+///
 
 export const Methods = Object.freeze({
   config,

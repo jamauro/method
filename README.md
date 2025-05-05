@@ -172,25 +172,59 @@ export const create = createMethod({
 ```
 
 ### Attach methods to its Collection (optional)
-Instead of importing each method, you can attach them to the Collection. If you're using [jam:easy-schema](https://github.com/jamauro/easy-schema) be sure to attach the schema before attaching the methods.
+Instead of importing each method, you can attach them to the Collection.
+
+By passing them in as an option, you get automatic type inference:
 
 ```js
 // /imports/api/todos/collection
 import { Mongo } from 'meteor/mongo';
-import { schema } from './schema';
+import * as methods from './methods';
 
-export const Todos = new Mongo.Collection('todos');
-
-Todos.attachSchema(schema); // if you're using jam:easy-schema
-
-const attach = async () => {
-  const methods = await import('./methods.js') // dynamic import is recommended
-  return Todos.attachMethods(methods); // if you prefer not to use dynamic import, you can simply call attachMethods synchronously
-};
-
-attach().catch(error => console.error('Error attaching methods', error))
+export const Todos = new Mongo.Collection('todos', { methods });
 ```
-`attachMethods` accepts the method `options` as an optional second parameter. See [Configuring](#configuring-optional) for a list of the `options`.
+
+You can also dynamically import the methods if you want to save on inital bundle size but it will require a bit more ceremony to infer types. The JSDoc version is shown below but you can achieve the same with typescript.
+
+```js
+// /imports/api/todos/collection
+import { Mongo } from 'meteor/mongo';
+
+/**
+  @import * as methods from './methods' */
+
+/**
+ * @type {Mongo.Collection<Todo> & typeof methods} */
+export const Todos = new Mongo.Collection('todos', { methods: import('./methods') });
+```
+
+If you're using [jam:easy-schema](https://github.com/jamauro/easy-schema), pass in the schema along with your methods:
+
+```js
+// /imports/api/todos/collection
+import { Mongo } from 'meteor/mongo';
+import { schema } from 'meteor/jam:easy-schema';
+import * as methods from './methods';
+
+export const Todos = new Mongo.Collection('todos', { schema, methods });
+```
+
+And for dynamically importing, you'd do this:
+```js
+// /imports/api/todos/collection
+import { Mongo } from 'meteor/mongo';
+import { schema } from 'meteor/jam:easy-schema';
+
+/**
+  @import * as methods from './methods'
+  @import { Infer } from 'meteor/jam:easy-schema' */
+
+/**
+ * @type {Mongo.Collection<Infer<schema>> & typeof methods} */
+export const Todos = new Mongo.Collection('todos', { methods: import('./methods') });
+```
+
+`Note:` previously you had to use `Collection.attachMethods(...)`. You can still use it but it will require more setup for type inference. It remains for backwards compatibilty and accepts the method `options` as an optional second parameter. See [Configuring](#configuring-optional) for a list of the `options`.
 
 With the methods attached you'll use them like this on the client:
 ```js

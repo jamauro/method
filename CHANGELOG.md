@@ -1,3 +1,6 @@
+## 1.9.0
+* feat: pass in `methods` as option when creating collection `new Mongo.Collection(..., { methods })` for automatic type inference. `attachMethods` remains for backwards compatibility.
+
 ## 1.8.2
 * fix: support for `jam:easy-schema` improvements
 

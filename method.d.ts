@@ -2,6 +2,7 @@ import { Meteor } from 'meteor/meteor';
 import { Match } from 'meteor/check';
 import type * as z from 'zod';
 import SimpleSchema from 'simpl-schema';
+import type { Pattern, Infer } from 'meteor/jam:easy-schema';
 
 export interface PipelineContext<T> {
   originalInput: T,
@@ -27,7 +28,7 @@ export declare function validate<D, Z extends z.ZodTypeAny>(data: D): z.output<Z
 
 /**
  * Create a method with specified properties or given a function.
- * @template {import('meteor/check').Match.Pattern | import('zod').ZodTypeAny | import('simpl-schema').SimpleSchema} S - The schema type (jam:easy-schema, check, Zod, or simple-schema)
+ * @template {import('meteor/jam:easy-schema').Pattern | import('meteor/check').Match.Pattern | import('zod').ZodTypeAny | import('simpl-schema').SimpleSchema} S - The schema type (jam:easy-schema, check, Zod, or simple-schema)
  * @template T - The return type
  * @param {{
  *   name: string,
@@ -41,13 +42,28 @@ export declare function validate<D, Z extends z.ZodTypeAny>(data: D): z.output<Z
  *   serverOnly?: boolean,
  *   options?: Object
  * } | Function } config - Options for creating the method. Can be a function instead (see functional-style syntax in docs).
- * @returns {(...args?: (z.input<S> | S)[]) => Promise<T> | { pipe: (...fns: Function[]) => (...args?: (z.input<S> | S)[]) => Promise<T> }} - The method function or an object with a `pipe` method
+ * @returns {(...args?: (z.input<S> | Infer<S> | S)[]) => Promise<T> | { pipe: (...fns: Function[]) => (...args?: (z.input<S> | S)[]) => Promise<T> }} - The method function or an object with a `pipe` method
  */
 export declare const createMethod: {
   validate: typeof validate;
   validate: {
     only: typeof validate;
   };
+
+  <S extends Pattern | undefined, T>(
+    config: {
+      name?: string;
+      schema: S;
+      validate?: Function;
+      rateLimit?: { interval: number; limit: number };
+      before?: Function | Array<Function>;
+      after?: Function | Array<Function>;
+      open?: boolean;
+      serverOnly?: boolean;
+      options?: Object;
+      run: (this: Meteor.MethodThisType, args: Infer<S>) => T | Promise<T>;
+    }
+  ): (args: Infer<S>) => Promise<T>;
 
   <S extends z.ZodTypeAny, T>(
     config: {
@@ -75,7 +91,7 @@ export declare const createMethod: {
       open?: boolean,
       serverOnly?: boolean,
       options?: Object,
-      run: (this: Meteor.MethodThisType, args?: any) => T
+      run: (this: Meteor.MethodThisType, args?: S) => T
     }
   ): (...args?: any) => Promise<T>;
 
@@ -142,6 +158,12 @@ type Methods = {
 
 export declare const Methods: Methods;
 
+type SchemaArgument =
+  | Pattern
+  | Match.Pattern
+  | ZodTypeAny
+  | SimpleSchema;
+
 /**
  * Creates a higher-order function with an attached schema value.
  *
@@ -156,7 +178,9 @@ export declare const schema: <T>(schemaValue: T) => (fn: Function) => Function;
  * @param {function} fn - The function to be marked as server only.
  * @returns {function} - The marked function that only executes on the server side. On the client, it returns a noop.
  */
-export function server(fn: () => void): () => void;
+ export function server<Args, Return>(
+   fn: (args: Args) => Promise<Return>
+ ): (args: Args) => Promise<Return>;
 
 /**
  * Wraps a function to make it open - aka NOT require a logged-in user.
@@ -175,10 +199,10 @@ export declare function open(fn: Function): Function;
 export declare function close(fn: Function): Function;
 
 declare module 'meteor/mongo' {
-  module Mongo {
-    interface Collection {
-      attachMethods(
-        methods: { [methodName: string]: Function },
+  namespace Mongo {
+    interface Collection<T = any> {
+      attachMethods?<M extends Record<string, (...args: any[]) => any>>(
+        methods: M,
         options?: {
           before?: Function | Array<Function>;
           after?: Function | Array<Function>;
@@ -187,7 +211,11 @@ declare module 'meteor/mongo' {
           serverOnly?: boolean;
           options?: object;
         }
-      ): void;
+      ): this & M;
+    }
+
+    interface CollectionStatic {
+      new <S, M>(name: string, options: { schema: S, methods: M }): Collection<Infer<S>> & M;
     }
   }
 }
