@@ -61,7 +61,7 @@ export declare const createMethod: {
       open?: boolean;
       serverOnly?: boolean;
       options?: Object;
-      run: (this: Meteor.MethodThisType, args: Infer<S>) => T | Promise<T>;
+      run: (this: Meteor.MethodThisType, args: Infer<S>) => Promise<T>;
     }
   ): (args: Infer<S>) => Promise<T>;
 
@@ -76,9 +76,9 @@ export declare const createMethod: {
       open?: boolean,
       serverOnly?: boolean,
       options?: Object,
-      run: (this: Meteor.MethodThisType, args: z.output<S>) => T
+      run: (this: Meteor.MethodThisType, args: z.output<S>) => Promise<T>
     }
-  ): (...args: S extends z.ZodUndefined ? [] : [z.input<S>]) => Promise<T>;
+  ): (...args: S extends z.ZodUndefined ? [] : [z.output<S>]) => Promise<T>;
 
   <S extends Match.Pattern | SimpleSchema, T>(
     config: {
@@ -91,7 +91,7 @@ export declare const createMethod: {
       open?: boolean,
       serverOnly?: boolean,
       options?: Object,
-      run: (this: Meteor.MethodThisType, args?: S) => T
+      run: (this: Meteor.MethodThisType, args?: S) => Promise<T>
     }
   ): (...args?: any) => Promise<T>;
 

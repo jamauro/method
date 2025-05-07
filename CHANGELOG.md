@@ -1,3 +1,6 @@
+## 1.9.1
+* fix: improvements for type inference for supported schema libs
+
 ## 1.9.0
 * feat: pass in `methods` as option when creating collection `new Mongo.Collection(..., { methods })` for automatic type inference. `attachMethods` remains for backwards compatibility.
 
