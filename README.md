@@ -597,3 +597,7 @@ Now when you call `Todos.setDone` from the client it will only run on the server
 
 ## Coming from `Validated Method`?
 You may be familiar with `mixins` and wondering where they are. With the features of this package - authenticated by default, `before` / `after` hooks, `.pipe` - your mixin code may no longer be needed or can be simplified. If you have another use case where your mixin doesn't translate, I'd love to hear it. Open a new discussion and let's chat.
+
+## Support
+
+If you find this package valuable, I hope you'll consider [supporting](https://github.com/sponsors/jamauro) it. :) Maybe you pass on the cost to your client(s) or factor in the time it saved you and your team.
